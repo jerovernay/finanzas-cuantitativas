@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanzas Cuantitativas — Mapa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<style>
+  :root {
+    --bg: #fafaf8;
+    --bg-sidebar: #f0efeb;
+    --text: #1a1a1a;
+    --text-muted: #5c5c5c;
+    --accent: #3d5a99;
+    --accent-light: #e8edf5;
+    --bolt: #c4710a;
+    --bolt-bg: #fef6e8;
+    --question: #8b3a62;
+    --question-bg: #f8edf3;
+    --arrow: #3d7a5a;
+    --border: #d8d6d0;
+    --code-bg: #eeeee8;
+    --shadow: rgba(0,0,0,.06);
+    --radius: 3px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161618;
+      --bg-sidebar: #1c1c1f;
+      --text: #d8d8d4;
+      --text-muted: #8a8a86;
+      --accent: #7ea4db;
+      --accent-light: #1e2a3d;
+      --bolt: #e0a840;
+      --bolt-bg: #2a2418;
+      --question: #c87aa6;
+      --question-bg: #2a1c24;
+      --arrow: #6ab88a;
+      --border: #2e2e30;
+      --code-bg: #222224;
+      --shadow: rgba(0,0,0,.25);
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  /* ── Layout ── */
+  .shell {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+  }
+
+  @media (max-width: 800px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .sidebar.open { display: block; position: fixed; inset: 0; z-index: 90; overflow-y: auto; }
+    .mobile-bar { display: flex !important; }
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    font-size: 13px;
+  }
+
+  .sidebar-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    padding: 0 1.25rem 1rem;
+    color: var(--text-muted);
+  }
+
+  .filter-bar {
+    padding: 0 1rem .75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .filter-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .toc-list { list-style: none; }
+
+  .toc-item {
+    display: block;
+    padding: 4px 1.25rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: all .12s;
+    line-height: 1.4;
+  }
+  .toc-item:hover { color: var(--text); background: var(--shadow); }
+  .toc-item.active { color: var(--accent); border-left-color: var(--accent); font-weight: 500; }
+
+  .toc-item[data-depth="1"] { font-weight: 600; color: var(--text); margin-top: .75rem; padding-left: 1.25rem; }
+  .toc-item[data-depth="2"] { padding-left: 1.75rem; font-weight: 500; margin-top: .35rem; }
+  .toc-item[data-depth="3"] { padding-left: 2.5rem; font-size: 12.5px; }
+
+  /* ── Main content ── */
+  .main {
+    max-width: 740px;
+    padding: 2.5rem 3rem 6rem;
+  }
+  @media (max-width: 800px) { .main { padding: 1.5rem 1.25rem 4rem; } }
+
+  .mobile-bar {
+    display: none;
+    position: sticky;
+    top: 0;
+    z-index: 80;
+    background: var(--bg-sidebar);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 16px;
+    align-items: center;
+    gap: 12px;
+  }
+  .mobile-bar button {
+    font-family: inherit;
+    font-size: 14px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px 10px;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  /* ── Typography ── */
+  .content h1 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin: 3rem 0 .5rem;
+    padding-bottom: .35rem;
+    border-bottom: 2px solid var(--accent);
+    color: var(--accent);
+  }
+  .content h1:first-child { margin-top: 0; }
+
+  .content h2 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 2rem 0 .4rem;
+    color: var(--text);
+  }
+
+  .content h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 1.5rem 0 .25rem;
+    color: var(--text);
+    padding: 6px 10px;
+    background: var(--accent-light);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+  }
+
+  .content p { margin: .45rem 0; max-width: 65ch; }
+  .content ul, .content ol { margin: .4rem 0 .4rem 1.5rem; }
+  .content li { margin: .2rem 0; }
+  .content hr { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }
+
+  .content blockquote {
+    border-left: 3px solid var(--border);
+    padding: .5rem 1rem;
+    color: var(--text-muted);
+    font-size: 14px;
+    margin: .75rem 0;
+    background: var(--code-bg);
+    border-radius: var(--radius);
+  }
+
+  .content table {
+    border-collapse: collapse;
+    font-size: 14px;
+    margin: .75rem 0;
+    width: 100%;
+  }
+  .content th, .content td {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  .content th { background: var(--bg-sidebar); font-weight: 600; }
+
+  .content code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: var(--radius);
+  }
+  .content pre {
+    background: var(--code-bg);
+    padding: .75rem 1rem;
+    border-radius: var(--radius);
+    overflow-x: auto;
+    font-size: 13px;
+    margin: .75rem 0;
+  }
+  .content pre code { background: none; padding: 0; }
+
+  .content a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+  }
+  .content a:hover { border-bottom-color: var(--accent); }
+
+  /* ── Special markers ── */
+  .content h3 code { background: none; font-size: 12px; color: var(--text-muted); font-weight: 400; }
+
+  /* Style the → connection lines */
+  .content p { word-wrap: break-word; }
+
+  .arrow-line {
+    display: block;
+    margin-top: 4px;
+    padding: 3px 8px;
+    font-size: 13px;
+    color: var(--arrow);
+    background: transparent;
+    border-radius: var(--radius);
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1.5;
+  }
+
+  .bolt-mark {
+    color: var(--bolt);
+    font-weight: 600;
+    background: var(--bolt-bg);
+    padding: 0 3px;
+    border-radius: 2px;
+  }
+
+  .question-block {
+    border-left: 3px solid var(--question);
+    background: var(--question-bg);
+    padding: .5rem 1rem;
+    border-radius: var(--radius);
+    margin: .5rem 0;
+  }
+
+  /* ── Search ── */
+  .search-box {
+    margin: 0 1rem .75rem;
+  }
+  .search-box input {
+    width: 100%;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+  }
+  .search-box input:focus { border-color: var(--accent); }
+  .search-box input::placeholder { color: var(--text-muted); }
+
+  /* ── Scroll highlighting ── */
+  .highlight-flash {
+    animation: flash .8s ease-out;
+  }
+  @keyframes flash {
+    0% { background: var(--accent-light); }
+    100% { background: transparent; }
+  }
+
+  /* hidden by filter */
+  .content section.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="mobile-bar">
+  <button onclick="document.querySelector('.sidebar').classList.toggle('open')">☰ Índice</button>
+  <span style="font-size:13px;color:var(--text-muted)">Finanzas Cuantitativas</span>
+</div>
+
+<div class="shell">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-title">Finanzas Cuanti</div>
+    <div class="search-box">
+      <input type="text" id="search" placeholder="Buscar concepto…" autocomplete="off">
+    </div>
+    <div class="filter-bar" id="filters"></div>
+    <ul class="toc-list" id="toc"></ul>
+  </nav>
+
+  <main class="main">
+    <div class="content" id="content">
+      <p style="color:var(--text-muted)">Cargando…</p>
+    </div>
+  </main>
+</div>
+
+<script>
+(async () => {
+  // ── Fetch and render markdown ──
+  const mdFile = 'finanzas_cuanti.md';
+  let md;
+  try {
+    const res = await fetch(mdFile);
+    if (!res.ok) throw new Error(res.status);
+    md = await res.text();
+  } catch {
+    document.getElementById('content').innerHTML =
+      `<p>No se encontró <code>${mdFile}</code> en el mismo directorio.<br>
+       Asegurate de que el archivo esté al lado de este <code>index.html</code>.</p>`;
+    return;
+  }
+
+  // Configure marked
+  marked.setOptions({ gfm: true, breaks: false });
+
+  const raw = marked.parse(md);
+  const content = document.getElementById('content');
+  content.innerHTML = raw;
+
+  // ── Post-process: style arrows, bolts, questions ──
+  content.querySelectorAll('p').forEach(p => {
+    const text = p.textContent;
+    // Arrow lines (→ connections)
+    if (text.startsWith('→')) {
+      p.classList.add('arrow-line');
+    }
+    // Question blocks
+    if (text.includes('❓')) {
+      p.classList.add('question-block');
+    }
+  });
+
+  // Style ⚡ marks
+  content.innerHTML = content.innerHTML.replace(/⚡/g, '<span class="bolt-mark">⚡</span>');
+
+  // ── Wrap sections by h1 for filtering ──
+  const h1s = content.querySelectorAll('h1');
+  h1s.forEach(h1 => {
+    const section = document.createElement('section');
+    // detect class tag from h1 text
+    const match = h1.textContent.match(/C(\d+)/);
+    if (match) section.dataset.clase = 'C' + match[1];
+    // also handle C7-C8
+    const matchRange = h1.textContent.match(/C(\d+)[–-]C?(\d+)/);
+    if (matchRange) {
+      section.dataset.clase = 'C' + matchRange[1];
+      section.dataset.clase2 = 'C' + matchRange[2];
+    }
+
+    h1.parentNode.insertBefore(section, h1);
+    section.appendChild(h1);
+    let next = section.nextSibling;
+    while (next && !(next.nodeType === 1 && next.tagName === 'H1')) {
+      const move = next;
+      next = next.nextSibling;
+      section.appendChild(move);
+    }
+  });
+
+  // ── Build TOC ──
+  const toc = document.getElementById('toc');
+  const headings = content.querySelectorAll('h1, h2, h3');
+  const tocItems = [];
+
+  headings.forEach((h, i) => {
+    const id = 'h-' + i;
+    h.id = id;
+    const depth = parseInt(h.tagName[1]);
+    // skip h3s that are inside the "por completar" zone — too noisy
+    const text = h.textContent.replace(/\[C\d.*?\]/g, '').trim();
+    if (!text) return;
+
+    const a = document.createElement('a');
+    a.href = '#' + id;
+    a.className = 'toc-item';
+    a.dataset.depth = depth;
+    a.textContent = text.length > 42 ? text.slice(0, 40) + '…' : text;
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      h.classList.add('highlight-flash');
+      setTimeout(() => h.classList.remove('highlight-flash'), 900);
+      // close mobile sidebar
+      document.querySelector('.sidebar').classList.remove('open');
+    });
+    toc.appendChild(a);
+    tocItems.push({ el: a, heading: h, depth });
+  });
+
+  // ── Scroll spy ──
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = e.target.id;
+        tocItems.forEach(t => {
+          t.el.classList.toggle('active', t.heading.id === id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  headings.forEach(h => observer.observe(h));
+
+  // ── Class filters ──
+  const filters = document.getElementById('filters');
+  const clases = ['Todas', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9'];
+  clases.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (c === 'Todas' ? ' active' : '');
+    btn.textContent = c;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      content.querySelectorAll('section').forEach(s => {
+        if (c === 'Todas') {
+          s.classList.remove('hidden');
+        } else {
+          const match = s.dataset.clase === c || s.dataset.clase2 === c;
+          s.classList.toggle('hidden', !match);
+        }
+      });
+
+      // update TOC visibility
+      tocItems.forEach(t => {
+        const section = t.heading.closest('section');
+        if (!section || c === 'Todas') {
+          t.el.style.display = '';
+        } else {
+          const match = section.dataset.clase === c || section.dataset.clase2 === c;
+          t.el.style.display = match ? '' : 'none';
+        }
+      });
+    });
+    filters.appendChild(btn);
+  });
+
+  // ── Search ──
+  const searchInput = document.getElementById('search');
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.toLowerCase().trim();
+    // Reset class filter
+    document.querySelectorAll('.filter-btn').forEach(b =>
+      b.classList.toggle('active', b.textContent === 'Todas'));
+    content.querySelectorAll('section').forEach(s => s.classList.remove('hidden'));
+
+    if (!q) {
+      tocItems.forEach(t => t.el.style.display = '');
+      content.querySelectorAll('h3').forEach(h => {
+        const section = h.closest('section');
+        if (section) section.style.display = '';
+      });
+      return;
+    }
+
+    tocItems.forEach(t => {
+      const text = t.heading.textContent.toLowerCase();
+      // also check the paragraph after the heading
+      let bodyText = '';
+      let sib = t.heading.nextElementSibling;
+      while (sib && !['H1','H2','H3'].includes(sib.tagName)) {
+        bodyText += ' ' + sib.textContent.toLowerCase();
+        sib = sib.nextElementSibling;
+      }
+      const match = text.includes(q) || bodyText.includes(q);
+      t.el.style.display = match ? '' : 'none';
+    });
+  });
+})();
+</script>
+</body>
+</html>
