@@ -23,12 +23,14 @@ es el mecanismo de continuidad (Claude no recuerda entre conversaciones).
 ```
 ### Nombre del concepto  [C2 §2]
 Qué es, en 1–2 líneas. Fórmula si aplica.
+Ej.: caso concreto con números o un evento real que muestra por qué importa.
 → concepto_conectado · otro_concepto · idea_transversal
 ```
 
 **Convenciones.**
 - `[C2 §2]` = clase 2, sección 2 de las slides. Para filtrar una clase, buscá `[C2`.
 - `→` = "se conecta con". Es la red. Es lo que hace que esto sea un mapa y no una lista.
+- `Ej.:` = ejemplo concreto (número real o caso de mercado) de por qué el concepto/lema importa, no solo la definición.
 - `⚡` = arista transversal fuerte (el mismo esqueleto matemático reaparece en otra clase).
 - `❓ DUDA` = pregunta abierta tuya, sin resolver todavía.
 - En VSCode: el panel *Outline* te da la navegación por concepto (cada `###` es un ítem).
@@ -64,70 +66,86 @@ en cada clase: duration/convexidad (bonos) → DV01/convexidad (swaps) → delta
 
 ### Renta fija / Bono  [C1 §2]
 Instrumento de deuda: una promesa de flujos futuros. Su precio es el valor presente de esos flujos, descontados a la tasa de mercado *y*: `P = Σ C/(1+y)^t + VN/(1+y)^T`.
+Ej.: bono VN 1000, cupón 5% anual, 3 años, si y=6% el precio da ≈ 973 (bajo la par porque paga menos que lo que exige el mercado).
 → duration · convexidad · YTM · factor_de_descuento · bootstrapping
 
 ### Duration  [C1 §2]
 Sensibilidad del precio del bono a la tasa. *Macaulay*: tiempo promedio ponderado hasta los flujos (años, "centro de masa"). *Modificada* = Macaulay/(1+y): la elasticidad, `ΔP/P ≈ −D_mod·Δy`. Es la **primera derivada** del precio respecto de la tasa.
+Ej.: un bono con D_mod=7 pierde ≈7% de precio si la tasa sube 1 punto — con eso un trader dimensiona el riesgo sin recalcular el precio entero.
 → convexidad · DV01 · delta ⚡ · relación_tasa_precio
 
 ### Convexidad  [C1 §2]
 **Segunda derivada** del precio respecto de la tasa: corrige lo que la duration (recta tangente) sobre/subestima. `ΔP/P ≈ −D_mod·Δy + ½·C·Δy²`. Duration = velocidad, convexidad = aceleración.
+Ej.: ante una baja fuerte de tasas (Δy=−2%), la sola duration subestima la suba real del precio; sumar el término de convexidad corrige ese error de estimación.
 → duration · gamma ⚡ · expansión_de_Taylor
 
 ### Acción / Renta variable  [C1 §2]
 Fracción de propiedad de una empresa: derecho sobre ganancias (dividendos) y votos. A diferencia del bono, no promete flujos.
+Ej.: comprar una acción de YPF da derecho a cobrar dividendo si la empresa reparte y a votar en la asamblea — no hay ningún flujo garantizado como en un bono.
 → P/E_ratio · riesgo_sistemático · índices
 
 ### P/E ratio  [C1 §2]
 Precio sobre ganancias por acción. Cuántos años de ganancias actuales "pagás" por la acción; proxy grueso de valuación.
+Ej.: una acción tech con P/E 25 "cuesta" 25 años de ganancias actuales, vs. un banco con P/E 10 — señal rápida de qué tan cara está una relativa a la otra.
 → acción
 
 ### Riesgo sistemático (beta)  [C1 §2]
 Sensibilidad de una acción al movimiento del mercado. Es el riesgo que **no** se diversifica (el idiosincrático sí).
+Ej.: una acción con beta 1.5 sube (o baja) ≈1.5% cuando el índice se mueve 1% — con esto se arma un hedge o se explica por qué un portfolio es más volátil que el mercado.
 → acción · factores (C4) · portfolios (C5)
 
 ### Commodities  [C1 §2]
 Activos físicos fungibles (petróleo, oro, soja). Se operan sobre todo vía futuros.
+Ej.: un productor agropecuario vende futuro de soja en Rofex para fijar hoy el precio de la cosecha que todavía no levantó.
 → futuros
 
 ### Derivados  [C1 §2]
 Contratos cuyo valor deriva de un subyacente. Tres familias: **futuros** (comprar/vender a precio fijo en fecha futura), **swaps** (intercambio de flujos), **opciones** (derecho, no obligación).
+Ej.: una opción sobre acciones de Apple no vale nada por sí sola — su precio se mueve porque se mueve el precio de Apple.
 → futuros · swaps · opciones · IRS
 
 ### Call / Put  [C1 §2]
 **Call**: derecho de *comprar* el subyacente a precio K en (o antes de) T. **Put**: derecho de *vender*. Europea = solo en T; americana = en cualquier momento ≤ T.
+Ej.: comprar un call de GGAL strike $100 es apostar (con riesgo limitado a la prima) a que la acción sube por encima de $100 antes del vencimiento.
 → opciones (C2) · put_call_parity (C2) · valor_intrínseco (C2)
 
 ### CDS (Credit Default Swap)  [C1 §2]
 Seguro de crédito: el comprador paga una prima periódica; si el emisor entra en default, cobra. Protagonista de la crisis de 2008.
+Ej.: el CDS sobre deuda soberana argentina se dispara cada vez que sube el riesgo percibido de default — se usa como termómetro de riesgo país en tiempo real.
 → derivados · crédito_estructural (C3)
 
 ## §3 Actores del mercado
 
 ### Actores institucionales  [C1 §3]
 Regulados: bancos centrales (Fed, BCE, BCRA), bancos, fondos mutuos/de pensión, empresas no financieras (corporativos que se cubren), aseguradoras.
+Ej.: el BCRA interviniendo en el mercado de cambios (comprando/vendiendo dólares) para mover o contener el tipo de cambio.
 → actores_especulativos · market_maker
 
 ### Actores especulativos  [C1 §3]
 Buscan retorno tomando riesgo: hedge funds, **market makers** (proveen liquidez cotizando bid/ask), **arbitrajistas** (explotan diferencias de precio y las cierran).
+Ej.: un hedge fund que compra el mismo bono más barato en un mercado y lo vende más caro en otro, embolsando la diferencia hasta que se cierra.
 → market_maker · CIP (arbitraje) · no_arbitraje (C2)
 
 ### Market maker / liquidez  [C1 §3]
 Cotiza compra y venta simultáneas; gana el spread y provee liquidez. Contraparte del retail vía payment for order flow.
+Ej.: cotiza bid $99.5 / ask $100.5 en GGAL — compra a 99.5 y vende a 100.5, ganando el spread de $1 sin tomar una posición direccional.
 → payment_for_order_flow · LOB (Unidad 3)
 
 ### Retail / Payment for order flow  [C1 §3]
 El retail pasó de ruido de fondo a ~20–25% del volumen de acciones en EEUU (Robinhood). **PFOF**: el broker no cobra comisión y le *vende* el flujo de órdenes a un market maker mayorista; puede ejecutarse fuera de bolsa.
+Ej.: Robinhood no cobra comisión al usuario pero le vende el flujo de sus órdenes a Citadel Securities, que las ejecuta y le paga por ese flujo.
 → market_maker · GameStop (ej. 2021)
 
 ## §4 El precio del tiempo: tasas de interés
 
 ### Tasa simple / compuesta / continua  [C1 §4]
 **Simple**: `VF = VP(1 + r·t)` (interés proporcional al tiempo, sin reinversión). **Compuesta**: `VF = VP(1+r)^t` (se reinvierte). **Continua**: `VF = VP·e^{rt}` (límite de capitalizar infinitas veces; la que se usa para descontar en pricing).
+Ej.: $100 a 1 año con r=10%: simple da $110, compuesta anual también $110, pero compuesta mensual da ≈$110.47 y continua ≈$110.52 — la brecha crece con el plazo.
 → factor_de_descuento · VPN
 
 ### TNA / TEA / TEM  [C1 §4]
 Tasas equivalentes. **TNA** = nominal anual (la "anunciada", ignora la capitalización). **TEA** = efectiva anual, **TEM** = efectiva mensual (sí incluyen el efecto de capitalizar).
+Ej.: un plazo fijo con TNA 40% (capitalización mensual) rinde una TEA real de ≈48% — la TNA sola subestima lo que efectivamente se cobra.
 → tasa_compuesta
 
 ### VPN (Valor Presente Neto)  [C1 §4]
@@ -136,80 +154,98 @@ Suma de flujos descontados menos la inversión inicial: `VPN = Σ CF_t/(1+r)^t`,
 
 ### TIR / YTM  [C1 §4]
 **TIR**: la tasa que hace VPN = 0. **YTM** (yield to maturity): la TIR de un bono, la `y*` que iguala el precio de mercado al VP de sus flujos. No hay fórmula cerrada → se resuelve numéricamente. Es *una* tasa promedio de muchas (una por plazo).
+Ej.: un bono con VN 1000 y cupones que hoy cotiza a $950 — se resuelve numéricamente qué `y*` hace que el VP de esos flujos dé exactamente 950.
 → VPN · bono · tasas_spot · limitaciones_TIR
 
 ### Factor de descuento  [C1 §4]
 `P(0,T) = e^{−r(T)·T}`: cuánto vale hoy $1 seguro a recibir en T años. Ladrillo de toda valuación.
+Ej.: con r=5% a 2 años, `P(0,2) = e^{-0.10} ≈ 0.905` — un bono cupón cero que paga $1 en 2 años vale hoy 90.5 centavos.
 → tasas_spot · curva_de_descuento · IRS
 
 ### Curva de rendimiento  [C1 §4]
 La tasa como **función del plazo** `r(T)`. Tres formas: **normal** (sube con el plazo), **flat**, **invertida** (baja; señal recesiva clásica).
+Ej.: la curva de EEUU se invirtió en 2022-2023 (tasas cortas > largas) y se leyó como señal de recesión próxima.
 → tasas_spot · bootstrapping · Nelson-Siegel · teorías_estructura_temporal
 
 ### Relación tasa ↔ precio  [C1 §4]
 La relación más fundamental de renta fija: **↑ tasa ⇒ ↓ precio** y **↓ tasa ⇒ ↑ precio** (el precio es el VP de flujos, y descontar más fuerte baja el valor).
+Ej.: cuando la Fed subió agresivamente las tasas en 2022, los bonos largos del Tesoro cayeron más de 20% de precio en el año.
 → bono · duration · curva_de_rendimiento
 
 ### La Fed / federal funds rate  [C1 §4]
 Tasa overnight objetivo que fija la Fed; ancla el extremo corto de la curva y se propaga al resto.
+Ej.: el ciclo 2022-2023 llevó la tasa de referencia de ~0% a 5.25%-5.50%, encareciendo el crédito en toda la economía.
 → curva_de_rendimiento · LIBOR_SOFR
 
 ### LIBOR → SOFR  [C1 §4]
 Transición de la tasa de referencia: de LIBOR (basada en *encuestas* a bancos, manipulable) a **SOFR** (basada en *transacciones* reales de repo). De la declaración al dato duro.
+Ej.: el escándalo de manipulación del LIBOR (2012, bancos coludiendo para mover la tasa reportada) fue el motivo concreto de la migración a SOFR.
 → la_Fed
 
 ## §5 FX (mercado de divisas)
 
 ### FX / Forwards de moneda  [C1 §5]
 Mercado más grande que existe (~USD 9.6 billones/día). **Forward**: fijar hoy el tipo de cambio F para intercambiar monedas en T.
+Ej.: un importador que va a pagar una compra en USD dentro de 90 días fija hoy el tipo de cambio con un forward para no exponerse a la suba del dólar.
 → CIP · carry_trade · NDF · spot
 
 ### Covered Interest Parity (CIP)  [C1 §5]
 Ley de una sola tasa: dos rutas sin riesgo (quedarse en USD vs. pasar por otra moneda con forward) deben rendir igual → `F = S·e^{(r_d − r_f)·T}`. El forward **no es una predicción**: es aritmética de las tasas de hoy. Se puede invertir para extraer la tasa implícita.
+Ej.: a partir del spot USD/ARS y las tasas en pesos y en dólares se calcula el forward "justo" — si el mercado cotiza distinto, hay arbitraje.
 → no_arbitraje (C2) · forwards · carry_trade · arbitrajistas
 
 ### Carry trade  [C1 §5]
 La versión **sin cobertura** de la CIP: fondearse en moneda de tasa baja (histórico: JPY) e invertir en la de tasa alta. Gana el diferencial mientras el tipo de cambio no se mueva en contra. `❓` (nota: "Japón hace dos semanas" — episodio de unwind del carry JPY).
+Ej.: el unwind del carry trade en yenes de agosto 2024 — el BoJ subió tasas, el yen se apreció de golpe y forzó a cerrar posiciones fondeadas en JPY con pérdidas.
 → CIP · FX
 
 ### NDF (Non-Deliverable Forward)  [C1 §5]
 Forward que se liquida por diferencia en USD (no hay entrega física de la moneda). Se usa para monedas con restricciones cambiarias, como el ARS.
+Ej.: una empresa se cubre del ARS con un NDF que liquida en USD la diferencia de tipo de cambio, evitando el cepo que impide operar el forward físico de pesos.
 → forwards · FX
 
 ## §6 Construir y calibrar la curva
 
 ### Tasas spot / forward / descuento  [C1 §6]
 **Spot** `r(T)`: tasa para invertir hoy hasta T. **Forward**: tasa futura implícita entre dos plazos. **Descuento** `P(0,T)`: precio hoy de $1 en T. Son tres vistas de la misma curva.
+Ej.: con spot a 1 año de 4% y a 2 años de 5%, se despeja la tasa forward implícita "entre el año 1 y el año 2" — la tasa que el mercado espera para ese tramo.
 → factor_de_descuento · bootstrapping · YTM
 
 ### Teorías de la estructura temporal  [C1 §6]
 Por qué la curva tiene la forma que tiene: **expectativas puras** (la tasa larga = promedio de cortas esperadas), **prima de liquidez** (los plazos largos pagan extra), **segmentación** (oferta/demanda por tramo).
+Ej.: una curva invertida se explica, bajo expectativas puras, porque el mercado espera que las tasas cortas bajen en el futuro (anticipando una recesión).
 → curva_de_rendimiento
 
 ### Bootstrapping  [C1 §6]
 Extracción **iterativa** de tasas spot. Problema: los bonos con cupón mezclan flujos en múltiples fechas → no dan la spot directo. Solución: despejar plazo por plazo, usando las spot ya conocidas para descontar los cupones intermedios.
+Ej.: para extraer la spot a 2 años de un bono con cupón anual, primero se usa la spot a 1 año (ya conocida) para descontar el cupón del año 1, y con eso se despeja la spot a 2 años.
 → tasas_spot · Nelson-Siegel · curva_de_rendimiento
 
 ### Nelson-Siegel / NSS  [C1 §6]
 Modelo **paramétrico** de la curva. NS: 4 parámetros (nivel + pendiente + curvatura). **NSS** (Svensson): agrega una 2ª curvatura (β₃, λ₂) → 6 parámetros. Calibrar = mínimos cuadrados no lineales (mismo flujo que ajustar un modelo en física). Regla: parámetros < puntos, o interpolás en vez de ajustar.
+Ej.: ajustar la curva soberana argentina (decenas de bonos, precios ruidosos) con 4-6 parámetros da una curva suave en vez de un zigzag punto por punto.
 → bootstrapping · calibración ⚡ · riesgo_país (spread de curvas)
 
 ### Z-spread / OAS  [C1 §6]
 Spread de **crédito** limpio: cuánto hay que sumarle a *cada* tasa spot del gobierno para que los flujos del bono corporativo/soberano descuenten a su precio de mercado.
+Ej.: un bono corporativo con Z-spread de 300bp sobre el Tesoro americano — esos 300bp son el "precio" que el mercado le pone al riesgo de crédito de esa empresa.
 → tasas_spot · CDS · crédito_estructural (C3)
 
 ## §7 Interest Rate Swaps
 
 ### IRS (Interest Rate Swap)  [C1 §7]
 Contrato OTC: intercambio de flujos sobre un nocional N (no se transfiere N). El *payer* paga fija y recibe flotante. Valor = pata flotante − pata fija, ambas descontadas con la curva. Se valúa como portafolio de FRAs.
+Ej.: una empresa con deuda a tasa variable entra en un IRS pagando fija y recibiendo flotante, para dejar de estar expuesta a que la Fed siga subiendo tasas.
 → par_swap_rate · DV01 · MTM · curva_de_descuento · swaptions (C2)
 
 ### Par swap rate  [C1 §7]
 La tasa fija `c*` que hace el swap valer 0 al inicio: `c* = (1 − P(0,T)) / Σ δ_i·P(0,t_i)`.
+Ej.: al armar un swap a 5 años hoy, se calcula `c*` con la curva de descuento vigente — es la tasa fija "justa" para que ninguna parte pague de más al firmar.
 → IRS · MTM
 
 ### DV01 / MTM  [C1 §7]
 **MTM** (mark-to-market): un swap arranca en 0; con el tiempo y el movimiento de la curva gana o pierde valor. **DV01** (Dollar Value of 1bp): cuánto cambia el valor ante 1 punto básico de movimiento paralelo de la curva. Es la duration del swap, en dólares.
+Ej.: un swap con DV01 de $5.000 pierde $500.000 de MTM si la curva entera sube 1 punto porcentual (100bp) — así se traduce el riesgo de tasa a dinero concreto.
 → duration ⚡ · IRS · convexidad
 
 ## ❓ Dudas abiertas de C1
@@ -233,39 +269,48 @@ La tasa fija `c*` que hace el swap valer 0 al inicio: `c* = (1 − P(0,T)) / Σ 
 ## Entradas sembradas (ejemplo del formato)
 
 ### Valor intrínseco / temporal / moneyness  [C2 §2]
-Toda prima = **intrínseco** (lo que vale ejercer ya: call `max(S−K,0)`, put `max(K−S,0)`) + **temporal** (el valor de la opcionalidad que queda, ≥0, muere en T). **Moneyness**: ITM (intrínseco>0), ATM (S≈K, todo temporal), OTM (intrínseco=0). El temporal es máximo en ATM y crece con σ y con T.
+Toda prima = **intrínseco** (lo que vale ejercer ya: call `max(S−K,0)`, put `max(K−S,0)`) + **temporal** (el valor de la opcionalidad que queda, ≥0, **muere en T**). **Moneyness**: ITM (intrínseco>0), ATM (S≈K, todo temporal), OTM (intrínseco=0). El temporal es máximo en ATM y crece con σ y con T.
+Ej.: un call ATM con S=K vale casi todo valor temporal (apuesta pura a movimiento futuro), mientras que un call deep ITM (S>>K) vale casi todo intrínseco — se comporta casi como tener la acción.
 → call_put (C1) · griegas · volatilidad_implícita
 
 ### Put-Call Parity  [C2 §2]
 `C − P = S − K·e^{−rT}` (europeas, sin dividendos). Sale del **no-arbitraje**, vale para *cualquier* modelo de precio. Es el nodo central de "opciones sin modelo": un call menos un put replica un forward sintético.
+Ej.: si en el mercado `C − P ≠ S − Ke^{−rT}`, se arbitra comprando el lado barato y vendiendo el caro (call+bono vs. put+acción), embolsando la diferencia sin riesgo.
 → no_arbitraje · box_spread · forward_sintético · tasa_implícita
 
 ### Box spread  [C2 §2]
 Combinar un spread alcista y uno bajista para cobrar `K₂−K₁` seguro pase lo que pase → es un bono sintético. No es un método aparte: es la **Put-Call Parity restada dos veces**. Esconde una tasa de interés implícita.
+Ej.: armar un box spread con 4 opciones (dos calls, dos puts) para "prestar" o "pedir prestado" dinero a una tasa implícita, sin operar nunca un bono.
 → put_call_parity · tasa_implícita
 
 ### Breeden-Litzenberger  [C2 §2]
 La **segunda derivada** del precio del call respecto del strike ES la densidad de probabilidad (neutral al riesgo) que el mercado le asigna a `S_T`. Permite pricing sin modelo de cualquier payoff europeo con la distribución que el mercado ya cotiza. El butterfly es su versión discreta.
+Ej.: cuando el smile de volatilidad muestra puts OTM más caras, Breeden-Litzenberger revela que el mercado le asigna más probabilidad a una caída fuerte que la que predice una lognormal.
 → butterfly · convexidad_en_strike · densidad_implícita · smile (C3)
 
 ### Lema de Itô  [C2 §3]
 La "regla de la cadena" del cálculo estocástico. Para `dX = a·dt + b·dW`, aparece un término extra de segundo orden porque `(dW)² = dt` (variación cuadrática no nula). Motor de todo el pricing de derivados.
+Ej.: aplicar Itô a `dS = μS dt + σS dW` es el paso concreto que permite derivar la ecuación diferencial de Black-Scholes — sin el lema no hay fórmula de pricing.
 → movimiento_browniano · variación_cuadrática · GBM · Black-Scholes
 
 ### GBM (Geometric Brownian Motion)  [C2 §3]
 Modelo del precio de una acción: `dS = μS·dt + σS·dW`. Vía Itô da `S_T = S_0·exp((μ−σ²/2)T + σW_T)` → log-normal. Es el supuesto de precio bajo Black-Scholes.
+Ej.: simular con S_0=100, μ=8%, σ=20% a un año da una distribución de S_T sesgada a la derecha (log-normal) — nunca negativa, con cola larga hacia arriba.
 → lema_de_Itô · Black-Scholes · supuestos_BS
 
 ### Black-Scholes  [C2 §4]
 Precio de una opción europea bajo GBM + no-arbitraje, vía **delta-hedging** (una cartera opción−Δ·acción es sin riesgo instantáneo) o **pricing neutro al riesgo** (bajo la medida Q, el precio = payoff esperado descontado a r). `C = S·N(d₁) − K·e^{−rT}·N(d₂)`, con `N(d₂)=Q(S_T>K)`.
+Ej.: con S=100, K=100, r=5%, σ=20%, T=0.25 la fórmula da un precio de call concreto que se compara contra la prima que cotiza el mercado.
 → GBM · griegas · volatilidad_implícita · pricing_neutro_al_riesgo · d1_d2
 
 ### Griegas  [C2 §4]
 Sensibilidades del precio de la opción. **Delta** (∂/∂S, hedge ratio) ⚡ análogo a duration. **Gamma** (∂²/∂S², convexidad) ⚡ análogo a convexidad. **Theta** (∂/∂t, decaimiento). **Vega** (∂/∂σ). **Rho** (∂/∂r). Mismo esqueleto Taylor que bonos/swaps.
+Ej.: un portfolio delta-hedgeado (delta=0) puede seguir perdiendo plata si tiene gamma alto y el subyacente saltea fuerte — el hedge lineal no cubre el movimiento de segundo orden.
 → delta_hedging · duration (C1) ⚡ · convexidad (C1) ⚡ · trading_de_volatilidad
 
 ### Volatilidad implícita / smile  [C2 §4]
 La σ que, metida en Black-Scholes, reproduce el precio de mercado de la opción. Si BS fuera exacto sería constante en todo strike; **no lo es** → el "smile"/"skew" es la agenda entera de C3.
+Ej.: desde el crash de 1987, las puts OTM en índices cotizan con IV sistemáticamente más alta que los calls OTM ("skew") — el mercado paga de más por protección ante caídas.
 → Black-Scholes · smile (C3) · Breeden-Litzenberger
 
 ## ⬜ Conceptos de C2 por completar (solo el nombre)
@@ -275,6 +320,35 @@ La σ que, metida en Black-Scholes, reproduce el precio de mercado de la opción
 **§3 estocástico:** movimiento browniano · integral de Itô · variación cuadrática · teorema de Girsanov (medida P → Q)
 
 **§4 Black-Scholes:** delta-hedging · pricing neutro al riesgo · d₁ y d₂ · PDE de Black-Scholes · trading de volatilidad (vol realizada vs implícita) · P&L del delta-hedger · supuestos de BS y dónde fallan
+
+
+## Notas de clase -- Opciones sin modelo: cotas, paridad y estategias
+
+*§2 sin modelo:* --- Ideea detras de las cotas, el modelo se ve despues
+
+Opcion: Definicion. Veremos opciones europeas, pero existen mas de estas (distintas reglas). Especulacion?
+Call -> opcion de compra (max (S-K, 0))
+Put -> Opcion de venta( max (K-S, 0))
+donde S es el valor del producto financiero en si, K es el valor al que se ejerce la opcion
+
+cotas de call/put, defino cotas para delimitar lo que conviene a momento de ejercer.
+Como definir la cota: P6 y comparacion de portfolio para encontrar valoresa futuro de Calls o Puts (Incluso tasas)
+Futuro como opcion <- forward = contrato en el futuro en el cual hoy pactamos un precio. Se plantea como una manera de amortiguacion?
+
+monotonicidad en strike, *No entendi esta parte*
+Metodo Box spread vs PCP (solo para opciones europeas)
+Monotonicidad = primera derivada acotada; convexidad = segunda ≥ 0: q es una densidad válida
+
+*§3 estocástico:*
+
+El precio de mañana es incierto, necesitamos incorporar aleatoriedad
+Ejemplos: GBM(Movimiento browniano geometrico)
+Integral de Ito como solucion al metodo estocastico (o al menos mejorarlo)
+Lema de Ito es muy relevante, ayuda a la forma de medir el pricing.
+
+*§4 Black-Scholes:*
+
+
 
 ---
 
