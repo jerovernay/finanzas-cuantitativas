@@ -265,6 +265,38 @@
     border-radius: 2px;
   }
 
+  /* ── Bloque plegable "más" ── */
+  .content details {
+    margin: .35rem 0 .9rem;
+  }
+  .content details > summary {
+    cursor: pointer;
+    display: inline-block;
+    font-size: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-muted);
+    padding: 1px 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    list-style: none;
+    user-select: none;
+  }
+  .content details > summary::-webkit-details-marker { display: none; }
+  .content details > summary::before { content: '+ '; }
+  .content details[open] > summary::before { content: '– '; }
+  .content details > summary:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .content details[open] > summary {
+    margin-bottom: .35rem;
+  }
+  .content details[open] {
+    border-left: 2px solid var(--border);
+    padding: 0 0 .2rem .9rem;
+  }
+  .content details p { margin: .35rem 0; font-size: 14px; }
+
   .question-block {
     border-left: 3px solid var(--question);
     background: var(--question-bg);
@@ -334,7 +366,7 @@
   const mdFile = 'finanzas_cuanti.md';
   let md;
   try {
-    const res = await fetch(mdFile);
+    const res = await fetch(mdFile + '?v=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) throw new Error(res.status);
     md = await res.text();
   } catch {
