@@ -377,8 +377,8 @@
     100% { background: transparent; }
   }
 
-  /* hidden by filter */
-  .content section.hidden { display: none; }
+  /* hidden by filter / search */
+  .content .hidden { display: none; }
 </style>
 </head>
 <body>
@@ -482,6 +482,15 @@
     }
   });
 
+  // ── Search helpers ──
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  // KaTeX duplica cada fórmula en MathML + HTML; nos quedamos con una sola copia.
+  const searchText = el => {
+    const clone = el.cloneNode(true);
+    clone.querySelectorAll('.katex-mathml').forEach(n => n.remove());
+    return clone.textContent;
+  };
+
   // ── Build TOC: one collapsible group per clase (h1), concepts nested inside ──
   const toc = document.getElementById('toc');
   const headings = content.querySelectorAll('h1, h2, h3');
@@ -540,7 +549,16 @@
         document.querySelector('.sidebar').classList.remove('open');
       });
       sublist.appendChild(a);
-      tocItems.push({ el: a, heading: h, depth: parseInt(h.tagName[1]), group });
+
+      const bodyNodes = [];
+      let sib = h.nextElementSibling;
+      while (sib && !['H1', 'H2', 'H3'].includes(sib.tagName)) {
+        bodyNodes.push(sib);
+        sib = sib.nextElementSibling;
+      }
+      const searchable = norm(searchText(h) + ' ' + bodyNodes.map(searchText).join(' '));
+
+      tocItems.push({ el: a, heading: h, depth: parseInt(h.tagName[1]), group, section, bodyNodes, text: searchable });
     });
 
     group.appendChild(sublist);
@@ -571,6 +589,15 @@
   headings.forEach(h => observer.observe(h));
 
   // ── Class filters ──
+  const searchInput = document.getElementById('search');
+  const showAllBlocks = () => {
+    tocItems.forEach(t => {
+      t.heading.classList.remove('hidden');
+      t.bodyNodes.forEach(n => n.classList.remove('hidden'));
+      t.el.style.display = '';
+    });
+  };
+
   const filters = document.getElementById('filters');
   const clases = ['Todas', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9'];
   clases.forEach(c => {
@@ -580,6 +607,8 @@
     btn.addEventListener('click', () => {
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
+      searchInput.value = '';
+      showAllBlocks();
 
       content.querySelectorAll('section').forEach(s => {
         if (c === 'Todas') {
@@ -605,16 +634,15 @@
   });
 
   // ── Search ──
-  const searchInput = document.getElementById('search');
   searchInput.addEventListener('input', () => {
-    const q = searchInput.value.toLowerCase().trim();
+    const q = norm(searchInput.value.trim());
     // Reset class filter
     document.querySelectorAll('.filter-btn').forEach(b =>
       b.classList.toggle('active', b.textContent === 'Todas'));
     content.querySelectorAll('section').forEach(s => s.classList.remove('hidden'));
 
     if (!q) {
-      tocItems.forEach(t => t.el.style.display = '');
+      showAllBlocks();
       tocGroups.forEach((g, i) => {
         g.el.style.display = '';
         g.el.classList.toggle('open', i === 0);
@@ -622,23 +650,26 @@
       return;
     }
 
-    tocItems.forEach(t => {
-      const text = t.heading.textContent.toLowerCase();
-      // also check the paragraph after the heading
-      let bodyText = '';
-      let sib = t.heading.nextElementSibling;
-      while (sib && !['H1','H2','H3'].includes(sib.tagName)) {
-        bodyText += ' ' + sib.textContent.toLowerCase();
-        sib = sib.nextElementSibling;
+    // Un h2 (§) se muestra si matchea él mismo o alguno de sus h3 hasta el próximo h2.
+    const visible = tocItems.map(t => t.text.includes(q));
+    tocItems.forEach((t, i) => {
+      if (t.depth !== 2 || visible[i]) return;
+      for (let j = i + 1; j < tocItems.length && tocItems[j].depth === 3 && tocItems[j].section === t.section; j++) {
+        if (visible[j]) { visible[i] = true; break; }
       }
-      const match = text.includes(q) || bodyText.includes(q);
-      t.el.style.display = match ? '' : 'none';
+    });
+
+    tocItems.forEach((t, i) => {
+      t.heading.classList.toggle('hidden', !visible[i]);
+      t.bodyNodes.forEach(n => n.classList.toggle('hidden', !visible[i]));
+      t.el.style.display = visible[i] ? '' : 'none';
     });
 
     tocGroups.forEach(g => {
-      const anyMatch = tocItems.some(t => t.group === g && t.el.style.display !== 'none');
+      const anyMatch = tocItems.some((t, i) => t.group === g.el && visible[i]);
       g.el.style.display = anyMatch ? '' : 'none';
       g.el.classList.toggle('open', anyMatch);
+      g.section.classList.toggle('hidden', !anyMatch);
     });
   });
 })();
