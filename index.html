@@ -387,6 +387,28 @@
     100% { background: transparent; }
   }
 
+  /* ── Botón volver (historial de saltos por links de concepto) ── */
+  .back-btn {
+    position: fixed;
+    bottom: 1.25rem;
+    right: 1.25rem;
+    z-index: 70;
+    max-width: calc(100vw - 2.5rem);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg-sidebar);
+    color: var(--arrow);
+    box-shadow: 0 2px 8px var(--shadow);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .back-btn:hover { border-color: var(--arrow); }
+
   /* hidden by filter / search */
   .content .hidden { display: none; }
 
@@ -421,6 +443,8 @@
     </div>
   </main>
 </div>
+
+<button id="back-btn" class="back-btn" type="button" hidden></button>
 
 <script>
 (async () => {
@@ -557,16 +581,41 @@
     });
   };
 
+  // Si el destino está oculto por filtro/búsqueda, volver a "Todas" primero.
+  const revealIfHidden = el => {
+    if (el.closest('.hidden')) document.querySelector('.filter-btn').click();
+  };
+  const flash = el => {
+    el.classList.add('highlight-flash');
+    setTimeout(() => el.classList.remove('highlight-flash'), 900);
+  };
   const goTo = h => {
-    // Si el destino está oculto por filtro/búsqueda, volver a "Todas" primero.
-    if (h.classList.contains('hidden') || h.closest('.hidden')) {
-      document.querySelector('.filter-btn').click();
-    }
+    revealIfHidden(h);
     h.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    h.classList.add('highlight-flash');
-    setTimeout(() => h.classList.remove('highlight-flash'), 900);
+    flash(h);
     document.querySelector('.sidebar').classList.remove('open');
   };
+  const ownerHeading = node => {
+    let h = node.previousElementSibling;
+    while (h && !['H2', 'H3'].includes(h.tagName)) h = h.previousElementSibling;
+    return h;
+  };
+
+  // ── Historial de saltos por links de concepto ──
+  const jumpStack = [];
+  const backBtn = document.getElementById('back-btn');
+  const renderBackBtn = () => {
+    const top = jumpStack[jumpStack.length - 1];
+    backBtn.hidden = !top;
+    if (top) backBtn.textContent = `← Volver a «${top.label}»`;
+  };
+  backBtn.addEventListener('click', () => {
+    const { from } = jumpStack.pop();
+    revealIfHidden(from);
+    from.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    flash(from);
+    renderBackBtn();
+  });
 
   // ── Build TOC: one collapsible group per clase (h1), concepts nested inside ──
   const toc = document.getElementById('toc');
@@ -686,8 +735,7 @@
 
   content.querySelectorAll('p.arrow-line').forEach(p => {
     const fromSection = p.closest('section');
-    let selfHeading = p.previousElementSibling;
-    while (selfHeading && !['H2', 'H3'].includes(selfHeading.tagName)) selfHeading = selfHeading.previousElementSibling;
+    const selfHeading = ownerHeading(p);
 
     const tokens = p.textContent.replace(/^→\s*/, '').split('·').map(s => s.trim()).filter(Boolean);
     p.innerHTML = '→ ' + tokens.map(tok => {
@@ -701,6 +749,11 @@
   content.querySelectorAll('a.concept-link').forEach(a => {
     a.addEventListener('click', e => {
       e.preventDefault();
+      const from = a.closest('p.arrow-line');
+      const owner = ownerHeading(from);
+      const label = owner ? searchText(owner).replace(/\[C\d.*?\]/g, '').trim() : 'lectura';
+      jumpStack.push({ from, label: label.length > 30 ? label.slice(0, 28) + '…' : label });
+      renderBackBtn();
       goTo(document.getElementById(a.getAttribute('href').slice(1)));
     });
   });
