@@ -26,6 +26,7 @@
     --border: #d8d6d0;
     --code-bg: #eeeee8;
     --shadow: rgba(0,0,0,.06);
+    --hl: #fde68a;
     --radius: 3px;
   }
 
@@ -45,6 +46,7 @@
       --border: #2e2e30;
       --code-bg: #222224;
       --shadow: rgba(0,0,0,.25);
+      --hl: #6b5514;
     }
   }
 
@@ -379,6 +381,13 @@
 
   /* hidden by filter / search */
   .content .hidden { display: none; }
+
+  .content mark.hl {
+    background: var(--hl);
+    color: inherit;
+    padding: 0 1px;
+    border-radius: 2px;
+  }
 </style>
 </head>
 <body>
@@ -491,6 +500,55 @@
     return clone.textContent;
   };
 
+  const clearHighlights = root => {
+    root.querySelectorAll('mark.hl').forEach(m => {
+      const parent = m.parentNode;
+      m.replaceWith(document.createTextNode(m.textContent));
+      parent.normalize();
+    });
+  };
+
+  // Resalta q (ya normalizado) en los nodos de texto de root. Como norm() puede
+  // cambiar la longitud, se mapea cada índice normalizado a su índice original.
+  const highlight = (root, q) => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: n => n.parentNode.closest('.katex, mark.hl') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+
+    nodes.forEach(node => {
+      const orig = node.textContent;
+      let normed = '';
+      const map = [];
+      for (let i = 0; i < orig.length; i++) {
+        const n = norm(orig[i]);
+        for (let k = 0; k < n.length; k++) map.push(i);
+        normed += n;
+      }
+      const ranges = [];
+      let pos = normed.indexOf(q);
+      while (pos !== -1) {
+        ranges.push([map[pos], map[pos + q.length - 1] + 1]);
+        pos = normed.indexOf(q, pos + q.length);
+      }
+      if (!ranges.length) return;
+
+      const frag = document.createDocumentFragment();
+      let last = 0;
+      ranges.forEach(([s, e]) => {
+        if (s > last) frag.appendChild(document.createTextNode(orig.slice(last, s)));
+        const mark = document.createElement('mark');
+        mark.className = 'hl';
+        mark.textContent = orig.slice(s, e);
+        frag.appendChild(mark);
+        last = e;
+      });
+      if (last < orig.length) frag.appendChild(document.createTextNode(orig.slice(last)));
+      node.replaceWith(frag);
+    });
+  };
+
   // ── Build TOC: one collapsible group per clase (h1), concepts nested inside ──
   const toc = document.getElementById('toc');
   const headings = content.querySelectorAll('h1, h2, h3');
@@ -591,6 +649,7 @@
   // ── Class filters ──
   const searchInput = document.getElementById('search');
   const showAllBlocks = () => {
+    clearHighlights(content);
     tocItems.forEach(t => {
       t.heading.classList.remove('hidden');
       t.bodyNodes.forEach(n => n.classList.remove('hidden'));
@@ -659,10 +718,15 @@
       }
     });
 
+    clearHighlights(content);
     tocItems.forEach((t, i) => {
       t.heading.classList.toggle('hidden', !visible[i]);
       t.bodyNodes.forEach(n => n.classList.toggle('hidden', !visible[i]));
       t.el.style.display = visible[i] ? '' : 'none';
+      if (visible[i]) {
+        highlight(t.heading, q);
+        t.bodyNodes.forEach(n => highlight(n, q));
+      }
     });
 
     tocGroups.forEach(g => {
