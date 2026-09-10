@@ -304,6 +304,14 @@
     line-height: 1.5;
   }
 
+  .arrow-line a.concept-link {
+    color: var(--arrow);
+    text-decoration: none;
+    border-bottom: 1px dotted currentColor;
+    cursor: pointer;
+  }
+  .arrow-line a.concept-link:hover { border-bottom-style: solid; }
+
   .bolt-mark {
     color: var(--bolt);
     font-weight: 600;
@@ -549,6 +557,17 @@
     });
   };
 
+  const goTo = h => {
+    // Si el destino está oculto por filtro/búsqueda, volver a "Todas" primero.
+    if (h.classList.contains('hidden') || h.closest('.hidden')) {
+      document.querySelector('.filter-btn').click();
+    }
+    h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    h.classList.add('highlight-flash');
+    setTimeout(() => h.classList.remove('highlight-flash'), 900);
+    document.querySelector('.sidebar').classList.remove('open');
+  };
+
   // ── Build TOC: one collapsible group per clase (h1), concepts nested inside ──
   const toc = document.getElementById('toc');
   const headings = content.querySelectorAll('h1, h2, h3');
@@ -598,14 +617,7 @@
       a.className = 'toc-item';
       a.dataset.depth = parseInt(h.tagName[1]);
       a.textContent = text.length > 42 ? text.slice(0, 40) + '…' : text;
-      a.addEventListener('click', e => {
-        e.preventDefault();
-        h.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        h.classList.add('highlight-flash');
-        setTimeout(() => h.classList.remove('highlight-flash'), 900);
-        // close mobile sidebar
-        document.querySelector('.sidebar').classList.remove('open');
-      });
+      a.addEventListener('click', e => { e.preventDefault(); goTo(h); });
       sublist.appendChild(a);
 
       const bodyNodes = [];
@@ -626,6 +638,72 @@
 
   // first clase open by default, rest collapsed
   if (tocGroups.length) tocGroups[0].el.classList.add('open');
+
+  // ── Links en las líneas → : cada token se resuelve al heading que lo explica ──
+  const words = s => norm(s.replace(/[₀-₉]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x2080 + 48)))
+    .split(/[^a-z0-9]+/).filter(Boolean);
+  const stem = w => w.replace(/s$/, '');
+  const eqExact = (a, b) => a === b;
+  const eqStem = (a, b) => stem(a) === stem(b);
+  // (a = palabra del título, b = palabra del token) — permite abreviaturas tipo vol → volatilidad
+  const eqPrefix = (a, b) => eqStem(a, b) || (b.length >= 3 && a.startsWith(b));
+  const containsSeq = (hay, needle, eq) => {
+    if (!needle.length || needle.length > hay.length) return false;
+    for (let i = 0; i + needle.length <= hay.length; i++) {
+      if (needle.every((w, k) => eq(hay[i + k], w))) return true;
+    }
+    return false;
+  };
+  const containsAll = (hay, needle, eq) => needle.every(w => hay.some(h => eq(h, w)));
+
+  const headingIndex = tocItems
+    .filter(t => t.section.dataset.clase)
+    .map(t => ({ t, words: words(searchText(t.heading).replace(/\[C\d.*?\]/g, '')) }));
+
+  const resolveToken = (token, fromSection, selfHeading) => {
+    const hint = (token.match(/\(C(\d)\)/) || [])[1];
+    const tw = words(token.replace(/⚡/g, '').replace(/\([^)]*\)/g, '').replace(/_/g, ' '));
+    if (!tw.length) return null;
+
+    const pick = (matcher, eq) => {
+      const cands = headingIndex.filter(h => h.t.heading !== selfHeading && matcher(h.words, tw, eq));
+      if (!cands.length) return null;
+      const score = h => {
+        let s = 0;
+        if (h.words.length === tw.length) s += 1000;
+        s -= h.words.length * 10;
+        if (hint && h.t.section.dataset.clase === 'C' + hint) s += 100;
+        else if (!hint && h.t.section === fromSection) s += 5;
+        return s;
+      };
+      return cands.sort((a, b) => score(b) - score(a))[0].t.heading;
+    };
+    return pick(containsSeq, eqExact) || pick(containsSeq, eqStem) || pick(containsAll, eqPrefix);
+  };
+
+  const escapeHtml = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const withBolt = s => escapeHtml(s).replace(/⚡/g, '<span class="bolt-mark">⚡</span>');
+
+  content.querySelectorAll('p.arrow-line').forEach(p => {
+    const fromSection = p.closest('section');
+    let selfHeading = p.previousElementSibling;
+    while (selfHeading && !['H2', 'H3'].includes(selfHeading.tagName)) selfHeading = selfHeading.previousElementSibling;
+
+    const tokens = p.textContent.replace(/^→\s*/, '').split('·').map(s => s.trim()).filter(Boolean);
+    p.innerHTML = '→ ' + tokens.map(tok => {
+      const target = resolveToken(tok, fromSection, selfHeading);
+      return target
+        ? `<a class="concept-link" href="#${target.id}">${withBolt(tok)}</a>`
+        : withBolt(tok);
+    }).join(' · ');
+  });
+
+  content.querySelectorAll('a.concept-link').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      goTo(document.getElementById(a.getAttribute('href').slice(1)));
+    });
+  });
 
   // ── Scroll spy ── (highlights active item + expands its group)
   const observer = new IntersectionObserver(entries => {
