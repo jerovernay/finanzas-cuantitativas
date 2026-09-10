@@ -6,7 +6,10 @@
 <title>Finanzas Cuantitativas — Mapa</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/contrib/auto-render.min.js"></script>
 <style>
   :root {
     --bg: #fafaf8;
@@ -424,6 +427,20 @@
   const raw = marked.parse(md);
   const content = document.getElementById('content');
   content.innerHTML = raw;
+
+  // ── Render fórmulas LaTeX con KaTeX ──
+  // Usa \( \) y \[ \] como delimitadores (no $ $) porque el markdown
+  // usa $ para montos de dinero (ej. "$100"), que no son matemática.
+  if (window.renderMathInElement) {
+    renderMathInElement(content, {
+      delimiters: [
+        { left: '\\[', right: '\\]', display: true },
+        { left: '\\(', right: '\\)', display: false },
+        { left: '$$', right: '$$', display: true }
+      ],
+      throwOnError: false
+    });
+  }
 
   // ── Post-process: style arrows, bolts, questions ──
   content.querySelectorAll('p').forEach(p => {
