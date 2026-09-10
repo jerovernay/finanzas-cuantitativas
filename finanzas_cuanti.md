@@ -1505,7 +1505,17 @@ académica) · Merton/KMV (crédito estructural; forma reducida para CDS).
 
 *§7 mapa de modelos:*
 
+
 ## ❓ Dudas de C3
+
+La volatilidad como un asset a tner en cuenta en el trade. 
+
+Grafico de Sticky strike vs. sticky moneyness
+
+En que sentido es malo "pagar velocidad o tratabilidad"
+
+Conviene un modelo que quiza tarde mas, pero precise en tiempos distintos?
+
 
 ---
 
