@@ -113,6 +113,49 @@
 
   .toc-list { list-style: none; }
 
+  .toc-group { border-bottom: 1px solid transparent; }
+
+  .toc-group-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    background: none;
+    border: none;
+    padding: 6px 1.25rem;
+    cursor: pointer;
+    text-align: left;
+  }
+  .toc-group-header:hover { background: var(--shadow); }
+  .toc-group-header .chevron {
+    display: inline-block;
+    font-size: 10px;
+    color: var(--text-muted);
+    transition: transform .15s;
+    flex: none;
+  }
+  .toc-group.open .toc-group-header .chevron { transform: rotate(90deg); }
+  .toc-group-header .count {
+    margin-left: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+  .toc-group-header.active-group { color: var(--accent); }
+
+  .toc-sublist {
+    list-style: none;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height .2s ease;
+  }
+  .toc-group.open .toc-sublist { max-height: 2000px; }
+
   .toc-item {
     display: block;
     padding: 4px 1.25rem;
@@ -125,7 +168,6 @@
   .toc-item:hover { color: var(--text); background: var(--shadow); }
   .toc-item.active { color: var(--accent); border-left-color: var(--accent); font-weight: 500; }
 
-  .toc-item[data-depth="1"] { font-weight: 600; color: var(--text); margin-top: .75rem; padding-left: 1.25rem; }
   .toc-item[data-depth="2"] { padding-left: 1.75rem; font-weight: 500; margin-top: .35rem; }
   .toc-item[data-depth="3"] { padding-left: 2.5rem; font-size: 12.5px; }
 
@@ -423,43 +465,87 @@
     }
   });
 
-  // ── Build TOC ──
+  // ── Build TOC: one collapsible group per clase (h1), concepts nested inside ──
   const toc = document.getElementById('toc');
   const headings = content.querySelectorAll('h1, h2, h3');
+  headings.forEach((h, i) => { h.id = 'h-' + i; });
+
   const tocItems = [];
+  const tocGroups = [];
 
-  headings.forEach((h, i) => {
-    const id = 'h-' + i;
-    h.id = id;
-    const depth = parseInt(h.tagName[1]);
-    // skip h3s that are inside the "por completar" zone — too noisy
-    const text = h.textContent.replace(/\[C\d.*?\]/g, '').trim();
-    if (!text) return;
+  content.querySelectorAll('section').forEach(section => {
+    const h1 = section.querySelector('h1');
+    if (!h1) return;
 
-    const a = document.createElement('a');
-    a.href = '#' + id;
-    a.className = 'toc-item';
-    a.dataset.depth = depth;
-    a.textContent = text.length > 42 ? text.slice(0, 40) + '…' : text;
-    a.addEventListener('click', e => {
-      e.preventDefault();
-      h.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      h.classList.add('highlight-flash');
-      setTimeout(() => h.classList.remove('highlight-flash'), 900);
-      // close mobile sidebar
-      document.querySelector('.sidebar').classList.remove('open');
+    const group = document.createElement('li');
+    group.className = 'toc-group';
+
+    const header = document.createElement('button');
+    header.type = 'button';
+    header.className = 'toc-group-header';
+
+    const chevron = document.createElement('span');
+    chevron.className = 'chevron';
+    chevron.textContent = '▸';
+    header.appendChild(chevron);
+
+    const label = document.createElement('span');
+    label.textContent = h1.textContent.replace(/\[C\d.*?\]/g, '').trim();
+    header.appendChild(label);
+
+    const subHeadings = section.querySelectorAll('h2, h3');
+    const count = document.createElement('span');
+    count.className = 'count';
+    count.textContent = subHeadings.length;
+    header.appendChild(count);
+
+    header.addEventListener('click', () => group.classList.toggle('open'));
+    group.appendChild(header);
+
+    const sublist = document.createElement('ul');
+    sublist.className = 'toc-sublist';
+
+    subHeadings.forEach(h => {
+      const text = h.textContent.replace(/\[C\d.*?\]/g, '').trim();
+      if (!text) return;
+
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.className = 'toc-item';
+      a.dataset.depth = parseInt(h.tagName[1]);
+      a.textContent = text.length > 42 ? text.slice(0, 40) + '…' : text;
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        h.classList.add('highlight-flash');
+        setTimeout(() => h.classList.remove('highlight-flash'), 900);
+        // close mobile sidebar
+        document.querySelector('.sidebar').classList.remove('open');
+      });
+      sublist.appendChild(a);
+      tocItems.push({ el: a, heading: h, depth: parseInt(h.tagName[1]), group });
     });
-    toc.appendChild(a);
-    tocItems.push({ el: a, heading: h, depth });
+
+    group.appendChild(sublist);
+    toc.appendChild(group);
+    tocGroups.push({ el: group, header, section });
   });
 
-  // ── Scroll spy ──
+  // first clase open by default, rest collapsed
+  if (tocGroups.length) tocGroups[0].el.classList.add('open');
+
+  // ── Scroll spy ── (highlights active item + expands its group)
   const observer = new IntersectionObserver(entries => {
     entries.forEach(e => {
       if (e.isIntersecting) {
         const id = e.target.id;
+        const activeSection = e.target.closest('section');
         tocItems.forEach(t => {
           t.el.classList.toggle('active', t.heading.id === id);
+        });
+        tocGroups.forEach(g => {
+          g.header.classList.toggle('active-group', g.section === activeSection);
+          if (g.section === activeSection) g.el.classList.add('open');
         });
       }
     });
@@ -487,14 +573,14 @@
         }
       });
 
-      // update TOC visibility
-      tocItems.forEach(t => {
-        const section = t.heading.closest('section');
-        if (!section || c === 'Todas') {
-          t.el.style.display = '';
+      // update TOC groups: show/hide + auto-expand the matching one
+      tocGroups.forEach(g => {
+        if (c === 'Todas') {
+          g.el.style.display = '';
         } else {
-          const match = section.dataset.clase === c || section.dataset.clase2 === c;
-          t.el.style.display = match ? '' : 'none';
+          const match = g.section.dataset.clase === c || g.section.dataset.clase2 === c;
+          g.el.style.display = match ? '' : 'none';
+          if (match) g.el.classList.add('open');
         }
       });
     });
@@ -512,9 +598,9 @@
 
     if (!q) {
       tocItems.forEach(t => t.el.style.display = '');
-      content.querySelectorAll('h3').forEach(h => {
-        const section = h.closest('section');
-        if (section) section.style.display = '';
+      tocGroups.forEach((g, i) => {
+        g.el.style.display = '';
+        g.el.classList.toggle('open', i === 0);
       });
       return;
     }
@@ -530,6 +616,12 @@
       }
       const match = text.includes(q) || bodyText.includes(q);
       t.el.style.display = match ? '' : 'none';
+    });
+
+    tocGroups.forEach(g => {
+      const anyMatch = tocItems.some(t => t.group === g && t.el.style.display !== 'none');
+      g.el.style.display = anyMatch ? '' : 'none';
+      g.el.classList.toggle('open', anyMatch);
     });
   });
 })();

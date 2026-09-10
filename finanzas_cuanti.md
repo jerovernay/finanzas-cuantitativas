@@ -52,7 +52,7 @@ Ej.: caso concreto con números o un evento real que muestre por qué importa.
 |---|---|---|
 | C1 | Introducción: mercados, tasas, FX y curvas | ✅ armada |
 | C2 | Opciones y Black-Scholes | ✅ armada |
-| C3 | Volatilidad, tasas y crédito | 🌱 sembrada (vas a la clase primero) |
+| C3 | Volatilidad, tasas y crédito | ✅ armada |
 | C4 | Factores | ⬜ pendiente |
 | C5 | Portfolios | ⬜ pendiente |
 | C6 | Machine Learning | ⬜ pendiente |
@@ -1170,13 +1170,10 @@ Las opciones se inventaron para Hedgearse. La opcion sirve para cubrirse , pero 
 
 # C3 — Volatilidad, tasas y crédito
 
-> 🌱 **Sembrada** (vas a la clase primero). *Pricing II: cuando Black-Scholes no alcanza.*
+> *Pricing II: cuando Black-Scholes no alcanza.*
 > El arco: §1 por qué falla BS (el smile como diagnóstico) → §2 vol local (Dupire) →
 > §3 vol estocástica (Heston) → §4 SABR, híbridos y saltos (Merton) → §5 modelos de tasa corta
 > (Vasicek/CIR/Hull-White) → §6 crédito estructural (Merton) → §7 el mapa de qué desk usa qué.
->
-> Abajo están las entradas columna vertebral; el resto de los conceptos quedan listados al final
-> para completar después de la clase.
 
 ## §1 Lo que Black-Scholes no puede hacer
 
@@ -1478,19 +1475,37 @@ académica) · Merton/KMV (crédito estructural; forma reducida para CDS).
 
 </details>
 
-## ⬜ Conceptos de C3 por completar después de la clase
+## ⬜ Conceptos de C3 por completar (no cubiertos en el teórico)
 
-**§1:** term structure de la vol · risk reversal y butterfly como cotizaciones de FX (RR25, BF25) · superficie `σ(K,T)` cruda
+**§1:** term structure de la vol · superficie `σ(K,T)` cruda
 
 **§2:** suavizado/interpolación de la superficie · condiciones de no-arbitraje sobre σ_local · exóticos de equity con vol local
 
 **§3:** condición de Feller · función característica de Heston · degeneración κ vs. ξ en la calibración
 
-**§4:** proceso de Poisson y Lévy · Kou · calibración de saltos · β en SABR por convención de mercado
+**§4:** proceso de Poisson y Lévy · Kou · calibración de saltos
 
-**§5:** modelos afines · caps y floors · HJM / LMM · half-life y calibración de `a` y σ
+**§5:** modelos afines · caps y floors · HJM / LMM en detalle
 
 **§6:** forma reducida (intensidad de default) vs. estructural · KMV en la práctica · del Z-spread (C1) a la PD
+
+## Notas de clase -- Volatilidad, tasas y crédito
+
+*§1 smile:*
+
+*§2 Dupire:*
+
+*§3 Heston:*
+
+*§4 SABR / saltos / híbridos:*
+
+*§5 tasa corta:*
+
+*§6 crédito estructural:*
+
+*§7 mapa de modelos:*
+
+## ❓ Dudas de C3
 
 ---
 
