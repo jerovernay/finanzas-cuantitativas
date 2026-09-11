@@ -17,7 +17,7 @@ es el mecanismo de continuidad (Claude no recuerda entre conversaciones).
 el *por qué* y el ejemplo viven plegados, a un clic.
 ```
 ### Nombre del concepto  [C2 §2]
-La esencia en 1–2 líneas. Fórmula si aplica.
+La esencia en 1–2 líneas. Fórmula si aplica: \(C - P = S - K e^{-rT}\).
 
 → concepto_conectado · otro_concepto · idea_transversal
 
@@ -43,6 +43,10 @@ después. Si no podés resumir la clase en esas tres partes, no la entendiste to
 - `→` = "se conecta con". Es la red. Es lo que hace que esto sea un mapa y no una lista.
 - `<details>` = el detalle plegado: el argumento + el `Ej.:`. La lectura rápida no lo abre;
   el estudio sí. En el sitio (`index.html`) es un desplegable; en VSCode se ve como texto.
+- Fórmulas en LaTeX con los delimitadores de KaTeX: barra + paréntesis para inline, barra +
+  corchete para display (como en el bloque de ejemplo de arriba). No usar `$…$` porque el
+  texto usa `$` para montos. Los backticks quedan solo para identificadores (archivos, tags,
+  nombres de función).
 - `⚡` = arista transversal fuerte (el mismo esqueleto matemático reaparece en otra clase).
 - `❓ DUDA` = pregunta abierta tuya, sin resolver todavía.
 - En VSCode: el panel *Outline* te da la navegación por concepto (cada `###` es un ítem).
@@ -84,8 +88,8 @@ sí se ven (bootstrapping, Nelson-Siegel) y cómo usarla para ponerle precio a u
 forward de FX (CIP). El resultado práctico es poder decir "este swap vale X y pierde Y si la
 curva sube 1bp".
 
-**Cómo conecta.** Hacia adelante: el factor de descuento `P(0,T)` es el ladrillo que usa
-*todo* el pricing de C2 y C3 (la `K·e^{−rT}` de Black-Scholes es la misma curva). La CIP es
+**Cómo conecta.** Hacia adelante: el factor de descuento \(P(0,T)\) es el ladrillo que usa
+*todo* el pricing de C2 y C3 (la \(K\cdot e^{-rT}\) de Black-Scholes es la misma curva). La CIP es
 la primera aparición del argumento de **no-arbitraje** — dos caminos sin riesgo tienen que
 rendir lo mismo — que en C2 se convierte en la put-call parity. Y calibrar Nelson-Siegel es
 el mismo flujo (datos → modelo paramétrico → optimización) que calibrar Heston en C3 ⚡.
@@ -99,21 +103,21 @@ en C2 se van a llamar delta y gamma ⚡.
 ## §2 Instrumentos
 
 ### Renta fija / Bono  [C1 §2]
-Promesa de flujos futuros. Su precio es el valor presente de esos flujos: `P = Σ C/(1+y)^t + VN/(1+y)^T`.
+Promesa de flujos futuros. Su precio es el valor presente de esos flujos: \(P = \sum C/(1+y)^t + VN/(1+y)^T\).
 
 → duration · convexidad · YTM · factor_de_descuento · bootstrapping
 
 <details><summary>más</summary>
 
-El precio no es un dato del emisor sino del mercado: sale de descontar flujos fijos a la tasa `y`
+El precio no es un dato del emisor sino del mercado: sale de descontar flujos fijos a la tasa \(y\)
 que el mercado exige *hoy* para ese riesgo y ese plazo.
-Ej.: bono VN 1000, cupón 5% anual, 3 años; si `y = 6%` el precio da ≈ 973 — bajo la par, porque
+Ej.: bono VN 1000, cupón 5% anual, 3 años; si \(y = 6\%\) el precio da ≈ 973 — bajo la par, porque
 paga menos que lo que exige el mercado.
 
 </details>
 
 ### Duration  [C1 §2]
-**Primera derivada** del precio respecto de la tasa: `ΔP/P ≈ −D_mod·Δy`.
+**Primera derivada** del precio respecto de la tasa: \(\Delta P/P \approx -D_{\text{mod}}\cdot \Delta y\).
 
 → convexidad · DV01 · delta ⚡ · relación_tasa_precio
 
@@ -121,13 +125,13 @@ paga menos que lo que exige el mercado.
 
 *Macaulay*: tiempo promedio ponderado hasta los flujos (en años, el "centro de masa" del bono).
 *Modificada* = Macaulay/(1+y): la elasticidad, ya en unidades de "% de precio por punto de tasa".
-Ej.: un bono con `D_mod = 7` pierde ≈7% de precio si la tasa sube 1 punto — con eso un trader
+Ej.: un bono con \(D_{\text{mod}} = 7\) pierde ≈7% de precio si la tasa sube 1 punto — con eso un trader
 dimensiona el riesgo sin recalcular el precio entero.
 
 </details>
 
 ### Convexidad  [C1 §2]
-**Segunda derivada** del precio respecto de la tasa: `ΔP/P ≈ −D_mod·Δy + ½·C·Δy²`.
+**Segunda derivada** del precio respecto de la tasa: \(\Delta P/P \approx -D_{\text{mod}}\cdot \Delta y + \tfrac{1}{2}\cdot C\cdot \Delta y^2\).
 
 → duration · gamma ⚡ · expansión_de_Taylor
 
@@ -135,7 +139,7 @@ dimensiona el riesgo sin recalcular el precio entero.
 
 Corrige lo que la duration (recta tangente) sobre/subestima. Duration = velocidad,
 convexidad = aceleración.
-Ej.: ante una baja fuerte de tasas (`Δy = −2%`), la sola duration subestima la suba real del
+Ej.: ante una baja fuerte de tasas (\(\Delta y = -2\%\)), la sola duration subestima la suba real del
 precio; sumar el término de convexidad corrige ese error.
 
 </details>
@@ -285,7 +289,7 @@ ejecuta y le paga por ese flujo.
 ## §4 El precio del tiempo: tasas de interés
 
 ### Tasa simple / compuesta / continua  [C1 §4]
-`VF = VP(1 + r·t)` · `VF = VP(1+r)^t` · `VF = VP·e^{rt}`. La continua es la que se usa para descontar en pricing.
+\(VF = VP(1 + r\cdot t)\) · \(VF = VP(1+r)^t\) · \(VF = VP\cdot e^{rt}\). La continua es la que se usa para descontar en pricing.
 
 → factor_de_descuento · VPN
 
@@ -311,7 +315,7 @@ subestima lo que efectivamente se cobra.
 </details>
 
 ### VPN (Valor Presente Neto)  [C1 §4]
-`VPN = Σ CF_t/(1+r)^t` con `CF_0 < 0`. Regla: invertir si VPN > 0.
+\(\text{VPN} = \sum CF_t/(1+r)^t\) con \(CF_0 < 0\). Regla: invertir si VPN > 0.
 
 → TIR · factor_de_descuento
 
@@ -323,25 +327,25 @@ subestima lo que efectivamente se cobra.
 <details><summary>más</summary>
 
 Es *una* tasa promedio que resume muchas (una por plazo): por eso la curva spot es más informativa.
-Ej.: un bono VN 1000 que cotiza a $950 — se resuelve numéricamente qué `y*` hace que el VP de
+Ej.: un bono VN 1000 que cotiza a $950 — se resuelve numéricamente qué \(y^*\) hace que el VP de
 sus flujos dé exactamente 950.
 
 </details>
 
 ### Factor de descuento  [C1 §4]
-`P(0,T) = e^{−r(T)·T}`: cuánto vale hoy $1 seguro a recibir en T. Ladrillo de toda valuación.
+\(P(0,T) = e^{-r(T)\cdot T}\): cuánto vale hoy $1 seguro a recibir en T. Ladrillo de toda valuación.
 
 → tasas_spot · curva_de_descuento · IRS
 
 <details><summary>más</summary>
 
-Ej.: con r=5% a 2 años, `P(0,2) = e^{−0.10} ≈ 0.905` — un cupón cero que paga $1 en 2 años vale
+Ej.: con r=5% a 2 años, \(P(0,2) = e^{-0.10} \approx 0.905\) — un cupón cero que paga $1 en 2 años vale
 hoy 90.5 centavos.
 
 </details>
 
 ### Curva de rendimiento  [C1 §4]
-La tasa como **función del plazo**, `r(T)`. Tres formas: normal, flat, invertida.
+La tasa como **función del plazo**, \(r(T)\). Tres formas: normal, flat, invertida.
 
 → tasas_spot · bootstrapping · Nelson-Siegel · teorías_estructura_temporal
 
@@ -405,7 +409,7 @@ forward para no quedar expuesto a la suba del dólar.
 </details>
 
 ### Covered Interest Parity (CIP)  [C1 §5]
-Dos rutas sin riesgo deben rendir igual: `F = S·e^{(r_d − r_f)·T}`. El forward **no es una predicción**.
+Dos rutas sin riesgo deben rendir igual: \(F = S\cdot e^{(r_d - r_f)\cdot T}\). El forward **no es una predicción**.
 
 → no_arbitraje (C2) · forwards · carry_trade · arbitrajistas
 
@@ -448,7 +452,7 @@ evitando el cepo que impide operar el forward físico de pesos.
 ## §6 Construir y calibrar la curva
 
 ### Tasas spot / forward / descuento  [C1 §6]
-Tres vistas de la misma curva: `r(T)` (invertir hoy hasta T), la tasa futura implícita entre dos plazos, y `P(0,T)`.
+Tres vistas de la misma curva: \(r(T)\) (invertir hoy hasta T), la tasa futura implícita entre dos plazos, y \(P(0,T)\).
 
 → factor_de_descuento · bootstrapping · YTM
 
@@ -535,13 +539,13 @@ para dejar de estar expuesta a que la Fed siga subiendo.
 </details>
 
 ### Par swap rate  [C1 §7]
-La tasa fija `c*` que hace el swap valer 0 al inicio: `c* = (1 − P(0,T)) / Σ δ_i·P(0,t_i)`.
+La tasa fija \(c^*\) que hace el swap valer 0 al inicio: \(c^* = (1 - P(0,T)) / \sum \delta _i\cdot P(0,t_i)\).
 
 → IRS · MTM
 
 <details><summary>más</summary>
 
-Ej.: al armar un swap a 5 años hoy se calcula `c*` con la curva de descuento vigente — es la
+Ej.: al armar un swap a 5 años hoy se calcula \(c^*\) con la curva de descuento vigente — es la
 tasa fija "justa" para que ninguna parte pague de más al firmar.
 
 </details>
@@ -586,7 +590,7 @@ aparece la idea clave del curso — cubrir el riesgo con delta-hedging hace que 
 dependa de cuánto creés que va a subir la acción, solo de cuánto se *mueve* (σ). Las griegas
 son el tablero de ese hedge: qué riesgo te queda después de cubrir la dirección.
 
-**Cómo conecta.** Hacia atrás: la tasa `r` y el descuento vienen de C1; la tasa implícita
+**Cómo conecta.** Hacia atrás: la tasa \(r\) y el descuento vienen de C1; la tasa implícita
 de las opciones es la CIP con otro disfraz ⚡; delta y gamma son duration y convexidad ⚡.
 Hacia adelante: la clase termina mostrando que la σ de Black-Scholes **no es constante**
 (smile), y eso es literalmente el programa de C3. Volatilidad como cosa que se compra y se
@@ -601,7 +605,7 @@ vende (trading de vol) es el puente entre pricing y trading que reaparece en tod
 ## §1 Bonos: repaso
 
 ### Precio, duration y convexidad como derivadas  [C2 §1]
-`D_mod = −(1/P)·∂P/∂y`, `C = (1/P)·∂²P/∂y²`, y `ΔP/P ≈ −D_mod·Δy + ½·C·(Δy)²`.
+\(D_{\text{mod}} = -(1/P)\cdot \partial P/\partial y\), \(C = (1/P)\cdot \partial ^2P/\partial y^2\), y \(\Delta P/P \approx -D_{\text{mod}}\cdot \Delta y + \tfrac{1}{2}\cdot C\cdot (\Delta y)^2\).
 
 → duration (C1) · convexidad (C1) · delta ⚡ · gamma ⚡ · expansión_de_Taylor
 
@@ -610,7 +614,7 @@ vende (trading de vol) es el puente entre pricing y trading que reaparece en tod
 La clase arranca acá a propósito: la sensibilidad primera y la segunda **son** delta y gamma
 cuando el subyacente pasa de ser la tasa a ser el precio de una acción. Mismo esqueleto,
 otro nombre.
-Ej.: el trader de bonos que piensa en `D_mod` y `C` y el de opciones que piensa en `Δ` y `Γ`
+Ej.: el trader de bonos que piensa en \(D_{\text{mod}}\) y \(C\) y el de opciones que piensa en \(\Delta\) y \(\Gamma\)
 están haciendo la misma expansión de Taylor sobre variables distintas.
 
 </details>
@@ -624,7 +628,7 @@ Europea: se ejerce **solo** en T. Americana: en cualquier momento ≤ T. Bermuda
 
 <details><summary>más</summary>
 
-Más derechos nunca valen menos: `C_am ≥ C_eur` y `P_am ≥ P_eur`. Es no-arbitraje puro, no hace
+Más derechos nunca valen menos: \(C_{\text{am}} \ge C_{\text{eur}}\) y \(P_{\text{am}} \ge P_{\text{eur}}\). Es no-arbitraje puro, no hace
 falta ningún modelo para afirmarlo.
 Ej.: los índices (SPX) y el FX suelen cotizar opciones europeas; las acciones individuales,
 americanas — el tipo cambia qué cotas y qué paridad podés usar.
@@ -632,7 +636,7 @@ americanas — el tipo cambia qué cotas y qué paridad podés usar.
 </details>
 
 ### Valor intrínseco / temporal / moneyness  [C2 §2]
-Prima = **intrínseco** (`max(S−K,0)` o `max(K−S,0)`) + **temporal** (lo que se paga por la opcionalidad restante, ≥ 0, muere en T).
+Prima = **intrínseco** (\(\max(S-K,0)\) o \(\max(K-S,0)\)) + **temporal** (lo que se paga por la opcionalidad restante, ≥ 0, muere en T).
 
 → griegas · theta · volatilidad_implícita
 
@@ -647,61 +651,61 @@ Ej.: vender una opción es cobrar valor temporal hoy a cambio de asumir el riesg
 </details>
 
 ### Cotas de call y put  [C2 §2]
-`max(S − Ke^{−rT}, 0) ≤ C ≤ S` y `max(Ke^{−rT} − S, 0) ≤ P ≤ Ke^{−rT}`. Libres de modelo.
+\(\max(S - Ke^{-rT}, 0) \le C \le S\) y \(\max(Ke^{-rT} - S, 0) \le P \le Ke^{-rT}\). Libres de modelo.
 
 → no_arbitraje · put_call_parity · ejercicio_anticipado
 
 <details><summary>más</summary>
 
-El techo `C ≤ S`: el derecho a comprar el activo no puede valer más que el activo. El piso sale
-de un portafolio: si `C < S − Ke^{−rT}`, comprás la call, vendés en corto la acción y prestás
-`Ke^{−rT}` — te embolsás plata hoy y en T el resultado nunca es negativo. Plata gratis, prohibido.
-Ej.: con r > 0 vale `C ≥ S − Ke^{−rT} > S − K`, o sea la call europea siempre vale **más** que su
+El techo \(C \le S\): el derecho a comprar el activo no puede valer más que el activo. El piso sale
+de un portafolio: si \(C < S - Ke^{-rT}\), comprás la call, vendés en corto la acción y prestás
+\(Ke^{-rT}\) — te embolsás plata hoy y en T el resultado nunca es negativo. Plata gratis, prohibido.
+Ej.: con r > 0 vale \(C \ge S - Ke^{-rT} > S - K\), o sea la call europea siempre vale **más** que su
 intrínseco; por eso nunca conviene ejercer anticipadamente una call americana sin dividendos.
 
 </details>
 
 ### Put-Call Parity (PCP)  [C2 §2]
-`C − P = S − K·e^{−rT}` (europeas, sin dividendos). Vale para **cualquier** modelo de precios.
+\(C - P = S - K\cdot e^{-rT}\) (europeas, sin dividendos). Vale para **cualquier** modelo de precios.
 
 → no_arbitraje · box_spread · forward_sintético · tasa_implícita
 
 <details><summary>más</summary>
 
-Prueba por replicación: el portafolio A (call + `K·e^{−rT}` invertido a la tasa libre de riesgo)
-y el B (put + acción) valen los dos `max(S_T, K)` en T. Mismo payoff ⇒ mismo precio hoy.
-Consecuencias: el put se despeja del call (`P = C − S + Ke^{−rT}`); un call largo + un put corto
-del mismo strike **es** un forward sintético, y sale "sin capital" solo si `K = F = S·e^{rT}`.
-Para americanas no es igualdad sino desigualdad: `C_am − P_am ∈ [S − K, S − Ke^{−rT}]`.
-Ej.: si el mercado cotiza `C − P ≠ S − Ke^{−rT}`, comprás el lado barato y vendés el caro:
+Prueba por replicación: el portafolio A (call + \(K\cdot e^{-rT}\) invertido a la tasa libre de riesgo)
+y el B (put + acción) valen los dos \(\max(S_T, K)\) en T. Mismo payoff ⇒ mismo precio hoy.
+Consecuencias: el put se despeja del call (\(P = C - S + Ke^{-rT}\)); un call largo + un put corto
+del mismo strike **es** un forward sintético, y sale "sin capital" solo si \(K = F = S\cdot e^{rT}\).
+Para americanas no es igualdad sino desigualdad: \(C_{\text{am}} - P_{\text{am}} \in [S - K, S - Ke^{-rT}]\).
+Ej.: si el mercado cotiza \(C - P \ne S - Ke^{-rT}\), comprás el lado barato y vendés el caro:
 arbitraje instantáneo sin riesgo.
 
 </details>
 
 ### Monotonicidad en strike  [C2 §2]
-`K₁ < K₂ ⇒ C(K₁) ≥ C(K₂)` (y el put al revés): el derecho a comprar más barato vale más.
+\(K_1 < K_2 \Rightarrow C(K_1) \ge C(K_2)\) (y el put al revés): el derecho a comprar más barato vale más.
 
 → spreads_verticales · convexidad_en_strike · densidad_implícita
 
 <details><summary>más</summary>
 
-**La prueba es una estrategia**: armá el bull call spread `+C(K₁) − C(K₂)`. Su payoff vale 0
-hasta K₁, sube 1 a 1 y se clava en `K₂−K₁`: **nunca es negativo**. Un payoff que nunca es
-negativo no puede costar menos que 0 hoy, y ese costo es exactamente `C(K₁) − C(K₂) ≥ 0`.
-El bear put spread `+P(K₂) − P(K₁)` es el argumento espejo para el put.
+**La prueba es una estrategia**: armá el bull call spread \(+C(K_1) - C(K_2)\). Su payoff vale 0
+hasta K₁, sube 1 a 1 y se clava en \(K_2-K_1\): **nunca es negativo**. Un payoff que nunca es
+negativo no puede costar menos que 0 hoy, y ese costo es exactamente \(C(K_1) - C(K_2) \ge 0\).
+El bear put spread \(+P(K_2) - P(K_1)\) es el argumento espejo para el put.
 Ej.: es la respuesta a la duda de tus notas — no hay que "ver" la monotonicidad, se demuestra
 construyendo el portafolio cuyo precio *es* la diferencia.
 
 </details>
 
 ### Spreads verticales (bull call / bear put)  [C2 §2]
-`+C(K₁) − C(K₂)` (alcista) y `+P(K₂) − P(K₁)` (bajista). Payoff acotado entre 0 y `K₂−K₁` ⇒ precio acotado igual.
+\(+C(K_1) - C(K_2)\) (alcista) y \(+P(K_2) - P(K_1)\) (bajista). Payoff acotado entre 0 y \(K_2-K_1\) ⇒ precio acotado igual.
 
 → monotonicidad_en_strike · opción_digital · box_spread · estrategias_direccionales
 
 <details><summary>más</summary>
 
-De la cota del payoff sale la cota del precio: `0 ≤ C(K₁) − C(K₂) ≤ (K₂−K₁)·e^{−rT}`.
+De la cota del payoff sale la cota del precio: \(0 \le C(K_1) - C(K_2) \le (K_2-K_1)\cdot e^{-rT}\).
 Los dos cuestan menos que la opción sola: pagás por direccionalidad, no por convexidad ilimitada.
 Ej.: vendés el upside que no creés que vaya a ocurrir (la call de strike alto) para financiar
 el que sí creés.
@@ -709,44 +713,44 @@ el que sí creés.
 </details>
 
 ### Opción digital (el spread angosto)  [C2 §2]
-Achicá el vertical y normalizá por su ancho: `−∂C/∂K = e^{−rT}·Q(S_T > K)`.
+Achicá el vertical y normalizá por su ancho: \(-\partial C/\partial K = e^{-rT}\cdot Q(S_T > K)\).
 
 → spreads_verticales · breeden_litzenberger · densidad_implícita
 
 <details><summary>más</summary>
 
 El payoff normalizado del bull call spread converge a un escalón en K₁: eso **es** una apuesta
-binaria (paga 1 si `S_T > K`, 0 si no). Y su precio es, literalmente, la probabilidad neutral al
+binaria (paga 1 si \(S_T > K\), 0 si no). Y su precio es, literalmente, la probabilidad neutral al
 riesgo de terminar ITM, descontada.
-Ej.: la pendiente de la curva `C(K)` que ves en pantalla ya te está diciendo qué probabilidad
+Ej.: la pendiente de la curva \(C(K)\) que ves en pantalla ya te está diciendo qué probabilidad
 le asigna el mercado a cada nivel de precio.
 
 </details>
 
 ### Tasa implícita (conversion / reversal)  [C2 §2]
-Despejando la PCP: `e^{−r_impl·T} = (S − C + P)/K`. Las opciones esconden una tasa de interés.
+Despejando la PCP: \(e^{-r_{\text{impl}}\cdot T} = (S - C + P)/K\). Las opciones esconden una tasa de interés.
 
 → put_call_parity · box_spread · CIP (C1) ⚡
 
 <details><summary>más</summary>
 
 Si esa tasa difiere de la del mercado, hay una posición que la arbitra: **conversion**
-(`r_impl > r_mkt`: vendés sintético `+P−C` y comprás la acción ⇒ prestás a la tasa alta) y
-**reversal** (`r_impl < r_mkt`: comprás sintético y vendés la acción en corto ⇒ te fondeás barato).
+(\(r_{\text{impl}} > r_{\text{mkt}}\): vendés sintético \(+P-C\) y comprás la acción ⇒ prestás a la tasa alta) y
+**reversal** (\(r_{\text{impl}} < r_{\text{mkt}}\): comprás sintético y vendés la acción en corto ⇒ te fondeás barato).
 Ej.: es la misma estructura lógica que la CIP de C1 — dos caminos sin riesgo tienen que rendir
 lo mismo, y si no, la diferencia se cobra.
 
 </details>
 
 ### Box spread  [C2 §2]
-Bull call + bear put con los mismos strikes: paga `K₂ − K₁` **pase lo que pase**. Es un bono cupón cero disfrazado: `Precio = (K₂−K₁)·e^{−rT}`.
+Bull call + bear put con los mismos strikes: paga \(K_2 - K_1\) **pase lo que pase**. Es un bono cupón cero disfrazado: \(\text{Precio} = (K_2-K_1)\cdot e^{-rT}\).
 
 → put_call_parity · tasa_implícita · spreads_verticales
 
 <details><summary>más</summary>
 
 No es un método aparte: es la **PCP restada dos veces**. Escribí la paridad en K₁ y en K₂ y restá:
-la S se cancela y queda `[C(K₁)−C(K₂)] + [P(K₂)−P(K₁)] = (K₂−K₁)e^{−rT}`.
+la S se cancela y queda \([C(K_1)-C(K_2)] + [P(K_2)-P(K_1)] = (K_2-K_1)e^{-rT}\).
 Justamente porque la S se cancela, en índices se prefiere el box: no hace falta un spot tradeable
 ni ajustar por dividendos, solo precios de opciones. Solo con europeas: el ejercicio anticipado
 rompe el "garantizado".
@@ -755,7 +759,7 @@ Ej.: la tasa del box de SPX sigue de cerca a la curva del Tesoro — dos mercado
 </details>
 
 ### Convexidad en strike y butterfly  [C2 §2]
-`C(K₁) − 2C(K₂) + C(K₃) ≥ 0`: `C(K)` es **convexa** en el strike.
+\(C(K_1) - 2C(K_2) + C(K_3) \ge 0\): \(C(K)\) es **convexa** en el strike.
 
 → breeden_litzenberger · monotonicidad_en_strike · densidad_implícita
 
@@ -770,15 +774,15 @@ condición para que lo que sale de los precios sea una densidad válida.
 </details>
 
 ### Breeden-Litzenberger  [C2 §2]
-`∂²C/∂K² = e^{−rT}·q(K)`: la segunda derivada del call en el strike **es** la densidad neutral al riesgo de `S_T`.
+\(\partial ^2C/\partial K^2 = e^{-rT}\cdot q(K)\): la segunda derivada del call en el strike **es** la densidad neutral al riesgo de \(S_T\).
 
 → butterfly · densidad_implícita · smile (C3) · vol_local (C3)
 
 <details><summary>más</summary>
 
-Sale de derivar dos veces `C(K) = e^{−rT}∫_K^∞ (S−K)q(S)dS`: la primera derivada da
-`−e^{−rT}Q(S_T>K)` (la digital), la segunda da la densidad. El butterfly angosto es esa derivada
-**ejecutada con dinero real**: `q(K) = lim_{h→0} e^{rT}·[C(K−h) − 2C(K) + C(K+h)]/h²`.
+Sale de derivar dos veces \(C(K) = e^{-rT}\int _K^\infty (S-K)q(S)dS\): la primera derivada da
+\(-e^{-rT}Q(S_T>K)\) (la digital), la segunda da la densidad. El butterfly angosto es esa derivada
+**ejecutada con dinero real**: \(q(K) = \lim_{h\to 0} e^{rT}\cdot [C(K-h) - 2C(K) + C(K+h)]/h^2\).
 Sí, el precio del butterfly tiende a 0, pero precio/h² no: es un 0/0 que converge a una densidad.
 Ej.: el mercado de opciones publica, strike a strike, una distribución de probabilidad completa
 — no hay que suponer ninguna.
@@ -786,13 +790,13 @@ Ej.: el mercado de opciones publica, strike a strike, una distribución de proba
 </details>
 
 ### Usos de la densidad implícita  [C2 §2]
-Pricing **sin modelo** de cualquier payoff europeo: `Precio = e^{−rT}∫ payoff(S)·q(S)dS`.
+Pricing **sin modelo** de cualquier payoff europeo: \(\text{Precio} = e^{-rT}\int \text{payoff}(S)\cdot q(S)dS\).
 
 → breeden_litzenberger · VIX · smile (C3)
 
 <details><summary>más</summary>
 
-No hace falta asumir GBM ni calibrar Heston: usás la `q(K)` que sale de la cadena de opciones.
+No hace falta asumir GBM ni calibrar Heston: usás la \(q(K)\) que sale de la cadena de opciones.
 Además la densidad muestra la **forma** del miedo, no solo su tamaño: una cola izquierda gorda vs.
 la lognormal significa que el mercado cobra prima extra por asegurar contra un crash.
 Ej.: el VIX es un caso particular de esta idea — se construye integrando una franja de precios
@@ -801,7 +805,7 @@ OTM en todos los strikes, sin modelo.
 </details>
 
 ### Calendar spread / monotonicidad en T  [C2 §2]
-`T₁ < T₂ ⇒ C(K,T₁) ≤ C(K,T₂)`: más plazo nunca vale menos. El calendar es `−C(K,T₁) + C(K,T₂)`.
+\(T_1 < T_2 \Rightarrow C(K,T_1) \le C(K,T_2)\): más plazo nunca vale menos. El calendar es \(-C(K,T_1) + C(K,T_2)\).
 
 → theta · trading_de_volatilidad · smile (C3) · no_arbitraje
 
@@ -812,7 +816,7 @@ fallar para europeas). Como estrategia: vendés la corta, comprás la larga, y g
 cerca de K hasta T₁ — cobrás la theta de la corta y la larga sobrevive. Es un trade sobre la
 **estructura temporal de la vol**.
 Ej.: junto con el butterfly, esto define el no-arbitraje sobre la superficie completa
-`σ_impl(K,T)`: convexidad en K y monotonicidad en T.
+\(\sigma _{\text{impl}}(K,T)\): convexidad en K y monotonicidad en T.
 
 </details>
 
@@ -833,13 +837,13 @@ posición.
 </details>
 
 ### Estrategias de volatilidad  [C2 §2]
-La dirección no importa: **straddle** `+C(K) + P(K)` (ATM, payoff `|S_T − K|`) y **strangle** `+C(K₂) + P(K₁)` (OTM, más barato).
+La dirección no importa: **straddle** \(+C(K) + P(K)\) (ATM, payoff \(|S_T - K|\)) y **strangle** \(+C(K_2) + P(K_1)\) (OTM, más barato).
 
 → trading_de_volatilidad · vega · butterfly · straddle
 
 <details><summary>más</summary>
 
-El straddle gana si `|S_T − K|` supera la suma de las dos primas; el strangle cuesta menos pero
+El straddle gana si \(|S_T - K|\) supera la suma de las dos primas; el strangle cuesta menos pero
 necesita un movimiento mayor. Son la forma directa de comprar (o vender) movimiento.
 Ej.: comprar un straddle antes de un balance es apostar a que el salto va a ser más grande que
 lo que el mercado ya cobró en las primas.
@@ -854,8 +858,8 @@ Opción sobre un swap: derecho a entrar en un IRS desde T₀ en condiciones pact
 <details><summary>más</summary>
 
 **Payer swaption**: derecho a entrar pagando fija (te cubrís si las tasas suben).
-**Receiver**: derecho a entrar recibiendo fija (si bajan). Parámetros: strike = tasa fija `c_K`,
-y el tenor del swap subyacente (`T_n − T₀`).
+**Receiver**: derecho a entrar recibiendo fija (si bajan). Parámetros: strike = tasa fija \(c_K\),
+y el tenor del swap subyacente (\(T_n - T_0\)).
 Ej.: es el puente natural entre las opciones de esta clase y las tasas de C1 — y el mercado más
 grande que casi nadie ve.
 
@@ -864,80 +868,80 @@ grande que casi nadie ve.
 ## §3 Procesos estocásticos y cálculo de Itô
 
 ### Por qué una ecuación diferencial estocástica  [C2 §3]
-`dX = a(X,t)dt + b(X,t)dW`: **drift** (tendencia determinista) + **difusión** (amplitud del ruido) × incremento browniano.
+\(dX = a(X,t)dt + b(X,t)dW\): **drift** (tendencia determinista) + **difusión** (amplitud del ruido) × incremento browniano.
 
 → movimiento_browniano · lema_de_Itô · GBM · CIR (C3)
 
 <details><summary>más</summary>
 
-Una ODE (`dS/dt = μS`) da `S(t) = S₀e^{μt}`: precio determinista, sin incertidumbre. La realidad
+Una ODE (\(dS/dt = \mu S\)) da \(S(t) = S_0e^{\mu t}\): precio determinista, sin incertidumbre. La realidad
 es que el precio de mañana es incierto, y la EDE es la forma mínima de meter esa aleatoriedad
 sin perder la estructura.
-Ej.: los dos casos del curso: GBM (`dS = μS dt + σS dW`) para pricing de acciones, y CIR
-(`dr = κ(θ−r)dt + σ√r dW`) para tasas.
+Ej.: los dos casos del curso: GBM (\(dS = \mu S dt + \sigma S dW\)) para pricing de acciones, y CIR
+(\(dr = \kappa (\theta -r)dt + \sigma \sqrt{r} dW\)) para tasas.
 
 </details>
 
 ### Movimiento browniano  [C2 §3]
-`W₀ = 0`, incrementos independientes y estacionarios (`W_t − W_s ~ N(0, t−s)`), trayectorias continuas.
+\(W_0 = 0\), incrementos independientes y estacionarios (\(W_t - W_s \sim N(0, t-s)\)), trayectorias continuas.
 
 → variación_cuadrática · integral_de_Itô · martingala
 
 <details><summary>más</summary>
 
-Propiedades derivadas: es una **martingala** (`E[W_t | F_s] = W_s`: el mejor pronóstico es el
-valor de hoy, sin ventaja) y `Var(W_t) = t`, la incertidumbre crece linealmente con el tiempo
+Propiedades derivadas: es una **martingala** (\(E[W_t | F_s] = W_s\): el mejor pronóstico es el
+valor de hoy, sin ventaja) y \(\mathrm{Var}(W_t) = t\), la incertidumbre crece linealmente con el tiempo
 (el desvío, como √t).
-Lo paradójico y fundamental: **no es diferenciable en ningún punto**, así que `dW` no es una
+Lo paradójico y fundamental: **no es diferenciable en ningún punto**, así que \(dW\) no es una
 derivada ordinaria, y su variación total es infinita.
 Ej.: la dispersión de un haz de trayectorias simuladas crece como √t, no como t — es lo que se
 ve en las bandas de la simulación.
 
 </details>
 
-### Variación cuadrática: `(dW)² = dt`  [C2 §3]
-Para una función suave la variación cuadrática es 0; para el browniano vale `[W]_T = T`. Ese único hecho genera todo el cálculo de Itô.
+### Variación cuadrática: \((dW)^2 = dt\)  [C2 §3]
+Para una función suave la variación cuadrática es 0; para el browniano vale \([W]_T = T\). Ese único hecho genera todo el cálculo de Itô.
 
 → movimiento_browniano · lema_de_Itô · integral_de_Itô
 
 <details><summary>más</summary>
 
-Con `Q_n = Σ(W_{t_i} − W_{t_{i−1}})²` sale `E[Q_n] = T` y `Var(Q_n) = 2T²/n → 0`: converge a T
+Con \(Q_n = \sum (W_{t_i} - W_{t_{i-1}})^2\) sale \(E[Q_n] = T\) y \(\mathrm{Var}(Q_n) = 2T^2/n \to 0\): converge a T
 en media cuadrática, **trayectoria por trayectoria**, no solo en promedio.
-La razón: `ΔW` es de orden `√Δt` (su desvío), así que `(ΔW)²` es de orden `Δt`, no `(Δt)²`.
-En cálculo ordinario `(dx)²` se va a 0 más rápido que `dt` y se descarta; acá no.
-Ej.: de ahí sale la tabla de multiplicación del cálculo estocástico: `dt·dt = 0`, `dt·dW = 0`,
-`dW·dW = dt`.
+La razón: \(\Delta W\) es de orden \(\sqrt{\Delta t}\) (su desvío), así que \((\Delta W)^2\) es de orden \(\Delta t\), no \((\Delta t)^2\).
+En cálculo ordinario \((dx)^2\) se va a 0 más rápido que \(dt\) y se descarta; acá no.
+Ej.: de ahí sale la tabla de multiplicación del cálculo estocástico: \(dt\cdot dt = 0\), \(dt\cdot dW = 0\),
+\(dW\cdot dW = dt\).
 
 </details>
 
 ### Integral de Itô  [C2 §3]
-`∫f dW := lim Σ f(W_{t_k}, t_k)·(W_{t_{k+1}} − W_{t_k})`: se evalúa `f` en el extremo **izquierdo** de cada intervalo.
+\(\int f dW := \lim \sum f(W_{t_k}, t_k)\cdot (W_{t_{k+1}} - W_{t_k})\): se evalúa \(f\) en el extremo **izquierdo** de cada intervalo.
 
 → variación_cuadrática · martingala · lema_de_Itô
 
 <details><summary>más</summary>
 
-El problema: la integral de Riemann-Stieltjes solo converge si `g` tiene variación total finita,
-y el browniano no la tiene — evaluar `f` a izquierda, a derecha o en el medio daría **tres
+El problema: la integral de Riemann-Stieltjes solo converge si \(g\) tiene variación total finita,
+y el browniano no la tiene — evaluar \(f\) a izquierda, a derecha o en el medio daría **tres
 límites distintos**. Itô (1944) no arregla el problema: elige una convención y la vuelve la
 definición.
-Elegir el extremo izquierdo tiene sentido financiero: `f` no puede "ver" el incremento futuro
-(es no-anticipante), y como consecuencia la integral es una martingala: `E[∫f dW] = 0`.
+Elegir el extremo izquierdo tiene sentido financiero: \(f\) no puede "ver" el incremento futuro
+(es no-anticipante), y como consecuencia la integral es una martingala: \(E[\int f dW] = 0\).
 Ej.: es la formalización de "decidís la posición con la información de hoy y el mercado se mueve
 después".
 
 </details>
 
 ### Lema de Itô  [C2 §3]
-La regla de la cadena estocástica: `dF = [∂F/∂t + a·∂F/∂x + ½b²·∂²F/∂x²]dt + b·∂F/∂x·dW`.
+La regla de la cadena estocástica: \(dF = [\partial F/\partial t + a\cdot \partial F/\partial x + \tfrac{1}{2}b^2\cdot \partial ^2F/\partial x^2]dt + b\cdot \partial F/\partial x\cdot dW\).
 
 → variación_cuadrática · GBM · Black-Scholes · delta_hedging
 
 <details><summary>más</summary>
 
-Sale de una Taylor a segundo orden sobre `F(X,t)`: el término `½·∂²F/∂x²·(dX)²` no se anula
-porque `(dX)² = b²dt`. Ese `½b²·∂²F/∂x²` es **el término de Itô**, la corrección de convexidad
+Sale de una Taylor a segundo orden sobre \(F(X,t)\): el término \(\tfrac{1}{2}\cdot \partial ^2F/\partial x^2\cdot (dX)^2\) no se anula
+porque \((dX)^2 = b^2dt\). Ese \(\tfrac{1}{2}b^2\cdot \partial ^2F/\partial x^2\) es **el término de Itô**, la corrección de convexidad
 estocástica; en cálculo ordinario no existe.
 Ej.: es el motor de todo el pricing de derivados — sin el lema no hay ni PDE ni fórmula de
 Black-Scholes.
@@ -945,23 +949,23 @@ Black-Scholes.
 </details>
 
 ### GBM y su solución exacta  [C2 §3]
-`dS = μS dt + σS dW` ⇒ `S_T = S₀·exp[(μ − σ²/2)T + σ√T·Z]`, con `Z ~ N(0,1)`. El precio es log-normal, nunca negativo.
+\(dS = \mu S dt + \sigma S dW\) ⇒ \(S_T = S_0\cdot \exp[(\mu - \sigma ^2/2)T + \sigma \sqrt{T}\cdot Z]\), con \(Z \sim N(0,1)\). El precio es log-normal, nunca negativo.
 
 → lema_de_Itô · Black-Scholes · supuestos_BS
 
 <details><summary>más</summary>
 
-Se resuelve aplicando Itô a `F = ln S`: los términos dan `d[ln S] = (μ − σ²/2)dt + σ dW`, que ya
-es integrable directo. La corrección `−σ²/2` es el término de Itô: sin él, la esperanza saldría
-mal. Ojo con la lectura: `E[S_T] = S₀e^{μT}` — μ es la tasa de crecimiento del precio, no la del
+Se resuelve aplicando Itô a \(F = \ln S\): los términos dan \(d[\ln S] = (\mu - \sigma ^2/2)dt + \sigma dW\), que ya
+es integrable directo. La corrección \(-\sigma ^2/2\) es el término de Itô: sin él, la esperanza saldría
+mal. Ojo con la lectura: \(E[S_T] = S_0e^{\mu T}\) — μ es la tasa de crecimiento del precio, no la del
 log-precio.
-Ej.: simular con `S₀=100, μ=8%, σ=20%` a un año da una distribución sesgada a la derecha, con
+Ej.: simular con \(S_0=100, \mu =8\%, \sigma =20\%\) a un año da una distribución sesgada a la derecha, con
 cola larga hacia arriba y piso en 0.
 
 </details>
 
 ### Teorema de Girsanov (P → Q)  [C2 §3]
-Existe una medida **Q** bajo la cual el drift de todos los activos es `r`: `dS = rS dt + σS dW̃`.
+Existe una medida **Q** bajo la cual el drift de todos los activos es \(r\): \(dS = rS dt + \sigma S d\tilde W\).
 
 → pricing_neutro_al_riesgo · Black-Scholes · d1_d2
 
@@ -969,9 +973,9 @@ Existe una medida **Q** bajo la cual el drift de todos los activos es `r`: `dS =
 
 Bajo la medida real P el drift μ depende de las preferencias de los inversores — imposible de
 estimar y distinto para cada uno. Girsanov (1960) permite cambiar de medida con
-`W̃_t = W_t + ((μ−r)/σ)·t`, donde `(μ−r)/σ` es el **precio de mercado del riesgo**.
-Consecuencia directa: para pricear no hace falta conocer μ, solo `r` y `σ` (observables). El
-precio de cualquier derivado es `V = e^{−r(T−t)}·E^Q[payoff]`.
+\(\tilde W_t = W_t + ((\mu -r)/\sigma )\cdot t\), donde \((\mu -r)/\sigma\) es el **precio de mercado del riesgo**.
+Consecuencia directa: para pricear no hace falta conocer μ, solo \(r\) y \(\sigma\) (observables). El
+precio de cualquier derivado es \(V = e^{-r(T-t)}\cdot E^Q[\text{payoff}]\).
 Ej.: es por eso que μ **no aparece** en la fórmula de Black-Scholes, cosa que de otro modo
 sería sospechosa.
 
@@ -980,14 +984,14 @@ sería sospechosa.
 ## §4 Black-Scholes: pricing de opciones europeas
 
 ### Delta-hedging y la PDE de Black-Scholes  [C2 §4]
-Portafolio `Π = C − Δ·S` con `Δ = ∂C/∂S`: el `dW` se cancela ⇒ debe rendir `r` ⇒ `∂C/∂t + ½σ²S²·∂²C/∂S² + rS·∂C/∂S − rC = 0`.
+Portafolio \(\Pi = C - \Delta \cdot S\) con \(\Delta = \partial C/\partial S\): el \(dW\) se cancela ⇒ debe rendir \(r\) ⇒ \(\partial C/\partial t + \tfrac{1}{2}\sigma ^2S^2\cdot \partial ^2C/\partial S^2 + rS\cdot \partial C/\partial S - rC = 0\).
 
 → lema_de_Itô · griegas · pricing_neutro_al_riesgo · PDE
 
 <details><summary>más</summary>
 
-Es la ruta alternativa a Girsanov, y funciona bajo la medida **real** P. Aplicás Itô a `C(S,t)`,
-armás la cartera, y elegir `Δ = ∂C/∂S` cancela el término aleatorio; de yapa cancela también el
+Es la ruta alternativa a Girsanov, y funciona bajo la medida **real** P. Aplicás Itô a \(C(S,t)\),
+armás la cartera, y elegir \(\Delta = \partial C/\partial S\) cancela el término aleatorio; de yapa cancela también el
 término de μ (cubrir el riesgo cancela la prima de riesgo). Lo que queda es un portafolio sin
 riesgo instantáneo, y por no-arbitraje tiene que rendir la tasa libre de riesgo.
 Ej.: **la respuesta a tu duda de las notas**: no es que "la opción venda acciones". Sos vos quien
@@ -997,90 +1001,90 @@ queda inmunizado.
 </details>
 
 ### Pricing neutro al riesgo  [C2 §4]
-`V(S,t) = e^{−r(T−t)}·E^Q[payoff(S_T)]`. Con `S_T` log-normal bajo Q, la integral da la fórmula cerrada.
+\(V(S,t) = e^{-r(T-t)}\cdot E^Q[\text{payoff}(S_T)]\). Con \(S_T\) log-normal bajo Q, la integral da la fórmula cerrada.
 
 → girsanov · Black-Scholes · d1_d2
 
 <details><summary>más</summary>
 
-`C = e^{−rT}E^Q[(S_T−K)·1_{S_T>K}] = e^{−rT}[E^Q[S_T·1_{S_T>K}] − K·Q(S_T>K)]`: los dos términos
+\(C = e^{-rT}E^Q[(S_T-K)\cdot \mathbf{1}_{S_T>K}] = e^{-rT}[E^Q[S_T\cdot \mathbf{1}_{S_T>K}] - K\cdot Q(S_T>K)]\): los dos términos
 de la fórmula son exactamente esos dos pedazos.
-**Por qué no alcanza con descontar `E^P` a la tasa r**: P y Q le asignan pesos distintos a los
-mismos resultados, así que las esperanzas ya difieren antes de descontar; y `r` es la tasa
+**Por qué no alcanza con descontar \(E^P\) a la tasa r**: P y Q le asignan pesos distintos a los
+mismos resultados, así que las esperanzas ya difieren antes de descontar; y \(r\) es la tasa
 correcta solo bajo Q. Usar μ tampoco sirve: la opción no tiene el riesgo de la acción, tiene el
-riesgo de la acción **apalancado** (`r_opción = r + Ω(μ−r)`, con `Ω = ΔS/C`).
-Ej.: descontar `E^P[payoff]` a `r` da un precio sobrevaluado, no un error de redondeo.
+riesgo de la acción **apalancado** (\(r_{\text{opción}} = r + \Omega (\mu -r)\), con \(\Omega = \Delta S/C\)).
+Ej.: descontar \(E^P[\text{payoff}]\) a \(r\) da un precio sobrevaluado, no un error de redondeo.
 
 </details>
 
 ### Fórmula de Black-Scholes  [C2 §4]
-`C = S·N(d₁) − K·e^{−rT}·N(d₂)` y `P = K·e^{−rT}·N(−d₂) − S·N(−d₁)`.
+\(C = S\cdot N(d_1) - K\cdot e^{-rT}\cdot N(d_2)\) y \(P = K\cdot e^{-rT}\cdot N(-d_2) - S\cdot N(-d_1)\).
 
 → d1_d2 · griegas · volatilidad_implícita · supuestos_BS
 
 <details><summary>más</summary>
 
-Black & Scholes (1973, Nobel 1997). La PDE con condición de frontera `C(S,T) = max(S−K,0)` se
+Black & Scholes (1973, Nobel 1997). La PDE con condición de frontera \(C(S,T) = \max(S-K,0)\) se
 transforma, con un cambio de variables, en la ecuación del calor de la física.
-Lectura probabilística: `S·N(d₁)` es el valor esperado del subyacente si la call termina ITM, y
-`K·e^{−rT}·N(d₂)` es el VP del strike ponderado por la probabilidad de ejercicio bajo Q.
-Ej.: en toda la fórmula aparecen solo `S, K, r, σ, T`. μ no está — exactamente lo que Girsanov
+Lectura probabilística: \(S\cdot N(d_1)\) es el valor esperado del subyacente si la call termina ITM, y
+\(K\cdot e^{-rT}\cdot N(d_2)\) es el VP del strike ponderado por la probabilidad de ejercicio bajo Q.
+Ej.: en toda la fórmula aparecen solo \(S, K, r, \sigma , T\). μ no está — exactamente lo que Girsanov
 había anticipado.
 
 </details>
 
 ### d₁ y d₂  [C2 §4]
-`d₂ = [ln(S/K) + (r − σ²/2)T]/(σ√T)` y `d₁ = d₂ + σ√T`. `N(d₂) = Q(S_T > K)`.
+\(d_2 = [\ln(S/K) + (r - \sigma ^2/2)T]/(\sigma \sqrt{T})\) y \(d_1 = d_2 + \sigma \sqrt{T}\). \(N(d_2) = Q(S_T > K)\).
 
 → Black-Scholes · pricing_neutro_al_riesgo · delta
 
 <details><summary>más</summary>
 
-`d₂` es el límite de integración escrito en unidades de z: la condición `S_T > K` traducida a
-"cuántos desvíos estándar". `d₁` aparece al integrar el término `S_T·1_{S_T>K}`: multiplicar la
-densidad normal por `S_T` "completa el cuadrado" y corre la gaussiana en `σ√T`.
-Cada pedazo: `ln(S/K)` es el moneyness en escala log; `(r ± σ²/2)T` es el drift esperado del
-log-precio bajo Q; dividir por `σ√T` normaliza todo a un z-score.
-Ej.: por eso `N(d₁)` termina siendo el delta y `N(d₂)` la probabilidad de ejercicio: son la misma
+\(d_2\) es el límite de integración escrito en unidades de z: la condición \(S_T > K\) traducida a
+"cuántos desvíos estándar". \(d_1\) aparece al integrar el término \(S_T\cdot \mathbf{1}_{S_T>K}\): multiplicar la
+densidad normal por \(S_T\) "completa el cuadrado" y corre la gaussiana en \(\sigma \sqrt{T}\).
+Cada pedazo: \(\ln(S/K)\) es el moneyness en escala log; \((r \pm \sigma ^2/2)T\) es el drift esperado del
+log-precio bajo Q; dividir por \(\sigma \sqrt{T}\) normaliza todo a un z-score.
+Ej.: por eso \(N(d_1)\) termina siendo el delta y \(N(d_2)\) la probabilidad de ejercicio: son la misma
 integral evaluada en límites corridos.
 
 </details>
 
 ### Griegas I — Delta  [C2 §4]
-`Δ = ∂C/∂S = N(d₁) ∈ (0,1)` para el call. OTM → ≈0; ATM → ≈0.5; deep ITM → ≈1.
+\(\Delta = \partial C/\partial S = N(d_1) \in (0,1)\) para el call. OTM → ≈0; ATM → ≈0.5; deep ITM → ≈1.
 
 → delta_hedging · duration (C1) ⚡ · gamma
 
 <details><summary>más</summary>
 
 Es a la vez la sensibilidad y el **hedge ratio**: cuántas acciones vender para inmunizar la
-opción (el mismo Δ que salió al derivar la PDE). Una call con `Δ = 0.30` se mueve, localmente,
+opción (el mismo Δ que salió al derivar la PDE). Una call con \(\Delta = 0.30\) se mueve, localmente,
 como 0.30 acciones.
 Ej.: delta-neutral **no** es sin riesgo: queda toda la exposición de orden superior (gamma, vega).
 
 </details>
 
 ### Griegas II — Gamma y Theta  [C2 §4]
-`Γ = ∂²C/∂S² = n(d₁)/(S·σ·√T)` (la convexidad) y `Θ = ∂C/∂t` (el decaimiento).
+\(\Gamma = \partial ^2C/\partial S^2 = n(d_1)/(S\cdot \sigma \cdot \sqrt{T})\) (la convexidad) y \(\Theta = \partial C/\partial t\) (el decaimiento).
 
 → convexidad (C1) ⚡ · trading_de_volatilidad · P&L_del_delta_hedger
 
 <details><summary>más</summary>
 
 Gamma es cuánto cambia el delta cuando se mueve S, o sea cuánto rebalanceo exige el hedge: máxima
-ATM y explota cuando `T → 0`. Estar **long gamma** es sistemáticamente favorable en el rebalanceo
+ATM y explota cuando \(T \to 0\). Estar **long gamma** es sistemáticamente favorable en el rebalanceo
 (comprás abajo, vendés arriba). Es igual para calls y puts, consecuencia directa de la PCP.
 Theta es negativa para opciones largas y se acelera al final.
-El trade-off central sale de la propia PDE: `−Θ = ½σ²S²·Γ + rS·Δ − rC`. **Theta es el alquiler de
+El trade-off central sale de la propia PDE: \(-\Theta = \tfrac{1}{2}\sigma ^2S^2\cdot \Gamma + rS\cdot \Delta - rC\). **Theta es el alquiler de
 la gamma**: quien está long gamma la paga todos los días, quien está short la cobra. Por eso no
-existe una posición delta-neutral con `Γ > 0` y `Θ > 0`: la convexidad se paga.
+existe una posición delta-neutral con \(\Gamma > 0\) y \(\Theta > 0\): la convexidad se paga.
 Ej.: un portfolio delta-hedgeado puede perder plata igual si tiene gamma alto y el subyacente
 saltea fuerte — el hedge lineal no cubre el segundo orden.
 
 </details>
 
 ### Griegas III — Vega y Rho  [C2 §4]
-`ν = ∂C/∂σ = S·n(d₁)·√T` (siempre positiva) y `ρ = ∂C/∂r = K·T·e^{−rT}·N(d₂)`.
+\(\nu = \partial C/\partial \sigma = S\cdot n(d_1)\cdot \sqrt{T}\) (siempre positiva) y \(\rho = \partial C/\partial r = K\cdot T\cdot e^{-rT}\cdot N(d_2)\).
 
 → trading_de_volatilidad · volatilidad_implícita · supuestos_BS
 
@@ -1098,7 +1102,7 @@ modelo se viole. 2022 lo recordó: con la Fed moviendo 500bp, rho dejó de ser l
 </details>
 
 ### Trading de volatilidad  [C2 §4]
-La vol como activo: `σ_real` (ex-post, rolling std de retornos) vs. `σ_impl` (la que el mercado paga hoy). Si `σ_impl > σ_real`, las opciones están caras.
+La vol como activo: \(\sigma _{\text{real}}\) (ex-post, rolling std de retornos) vs. \(\sigma _{\text{impl}}\) (la que el mercado paga hoy). Si \(\sigma _{\text{impl}} > \sigma _{\text{real}}\), las opciones están caras.
 
 → vega · straddle · P&L_del_delta_hedger · VIX
 
@@ -1106,33 +1110,33 @@ La vol como activo: `σ_real` (ex-post, rolling std de retornos) vs. `σ_impl` (
 
 El instrumento directo es el straddle ATM: long compra vega (gana si se mueve mucho), short la
 vende (gana si se queda quieto, cobrando theta). Regla práctica del costo:
-`straddle ATM ≈ 0.8·σ_impl·S·√T`.
-El P&L diario del delta-hedger es `≈ ½Γ(ΔS)² − Θ·Δt`: si `(ΔS)² > σ²Δt` gana el long gamma,
+\(\text{straddle ATM} \approx 0.8\cdot \sigma _{\text{impl}}\cdot S\cdot \sqrt{T}\).
+El P&L diario del delta-hedger es \(\approx \tfrac{1}{2}\Gamma (\Delta S)^2 - \Theta \cdot \Delta t\): si \((\Delta S)^2 > \sigma ^2\Delta t\) gana el long gamma,
 si no gana el short.
 Ej.: el VIX es el índice de vol implícita del S&P 500 a 30 días — el barómetro del miedo.
 
 </details>
 
 ### P&L del delta-hedger  [C2 §4]
-`P&L = ∫₀^T ½·Γ·S²·(σ_real² − σ_impl²)dt`: cosechás la diferencia entre la vol que pagaste y la que el mundo entregó.
+\(P\&L = \int _0^T \tfrac{1}{2}\cdot \Gamma \cdot S^2\cdot (\sigma _{\text{real}}^2 - \sigma _{\text{impl}}^2)dt\): cosechás la diferencia entre la vol que pagaste y la que el mundo entregó.
 
 → trading_de_volatilidad · gamma · breakeven_diario
 
 <details><summary>más</summary>
 
 Dos consecuencias no obvias: (1) el P&L es **path-dependent**, porque la diferencia pesa por la
-*dollar gamma* `Γ·S²` de cada momento; (2) podés tener razón (`σ_real > σ_impl` en promedio) y
+*dollar gamma* \(\Gamma \cdot S^2\) de cada momento; (2) podés tener razón (\(\sigma _{\text{real}} > \sigma _{\text{impl}}\) en promedio) y
 perder plata igual, si la gamma estaba lejos del strike cuando el mercado se movió.
-Regla práctica del breakeven diario: `|ΔS|/S = σ_impl/√252`. Con `σ_impl = 20%`, el breakeven es
+Regla práctica del breakeven diario: \(|\Delta S|/S = \sigma _{\text{impl}}/\sqrt{252}\). Con \(\sigma _{\text{impl}} = 20\%\), el breakeven es
 ≈1.26% diario.
 Ej.: 19 días pegado al strike con vol baja (perdiendo, porque Γ era alta) y después un salto
-enorme pero ya lejos del strike (con `Γ ≈ 0`): vol realizada total ~94% vs. 20% implícita, y el
+enorme pero ya lejos del strike (con \(\Gamma \approx 0\)): vol realizada total ~94% vs. 20% implícita, y el
 P&L final igual negativo. Timing y ubicación importan.
 
 </details>
 
 ### Volatilidad implícita, smile y skew  [C2 §4]
-`σ_impl(K,T)` = la σ que hace `BS = precio de mercado`. Si BS fuera correcto sería constante; **no lo es**.
+\(\sigma _{\text{impl}}(K,T)\) = la σ que hace \(BS = \text{precio de mercado}\). Si BS fuera correcto sería constante; **no lo es**.
 
 → Black-Scholes · breeden_litzenberger · smile (C3) · supuestos_BS
 
@@ -1144,7 +1148,7 @@ skew es negativo: las puts OTM tienen mayor IV que las calls OTM.
 Causa: la distribución real tiene colas más pesadas y asimetría negativa vs. la log-normal, y
 además hay demanda estructural de protección.
 Ej.: desde el crash de 1987 el mercado paga prima extra por cubrirse de la caída. Esa superficie
-`σ_impl(K,T)` es la agenda entera de C3 (Heston, SABR, vol local).
+\(\sigma _{\text{impl}}(K,T)\) es la agenda entera de C3 (Heston, SABR, vol local).
 
 </details>
 
@@ -1202,17 +1206,17 @@ Las opciones se inventaron para Hedgearse. La opcion sirve para cubrirse , pero 
 ## ❓ Dudas de C2 (marcadas en tus notas)
 
 - **"monotonicidad en strike, *No entendi esta parte*"** → Resuelta. No se "ve": se **demuestra
-  con un portafolio**. Armás el bull call spread `+C(K₁) − C(K₂)`; su payoff es 0 hasta K₁, sube
-  1 a 1 y se clava en `K₂−K₁`, así que nunca es negativo. Un payoff nunca negativo no puede
-  costar menos que 0 hoy, y ese costo *es* `C(K₁) − C(K₂)`. Por lo tanto `C(K₁) ≥ C(K₂)`.
+  con un portafolio**. Armás el bull call spread \(+C(K_1) - C(K_2)\); su payoff es 0 hasta K₁, sube
+  1 a 1 y se clava en \(K_2-K_1\), así que nunca es negativo. Un payoff nunca negativo no puede
+  costar menos que 0 hoy, y ese costo *es* \(C(K_1) - C(K_2)\). Por lo tanto \(C(K_1) \ge C(K_2)\).
   El bear put spread hace lo mismo del lado del put. → monotonicidad_en_strike
 - **"no entiendo como una opcion puede vender acciones y mantener la misma opcion"** → Resuelta.
-  La opción no vende nada. **Vos** vendés `Δ` acciones (en corto) *contra* la opción que tenés:
-  la opción sigue en tu libro intacta, lo que cambia es el paquete `Π = C − Δ·S`, que queda
+  La opción no vende nada. **Vos** vendés \(\Delta\) acciones (en corto) *contra* la opción que tenés:
+  la opción sigue en tu libro intacta, lo que cambia es el paquete \(\Pi = C - \Delta \cdot S\), que queda
   instantáneamente sin riesgo. Cuando S se mueve, Δ cambia (eso es gamma) y tenés que rebalancear
   esa posición de acciones, no la opción. → delta_hedging · griegas
 - **"¿Trading de volatilidad?"** → Sí: si delta-hedgeás hasta T, tu P&L deja de depender de la
-  dirección y pasa a ser `∫½ΓS²(σ_real² − σ_impl²)dt`. Comprás una vol y cosechás otra.
+  dirección y pasa a ser \(\int \tfrac{1}{2}\Gamma S^2(\sigma _{\text{real}}^2 - \sigma _{\text{impl}}^2)dt\). Comprás una vol y cosechás otra.
   → P&L_del_delta_hedger
 
 ---
@@ -1251,7 +1255,7 @@ mañana (sticky strike).
 ## §1 Lo que Black-Scholes no puede hacer
 
 ### Skew vs. smile  [C3 §1]
-La **forma** de la sonrisa es la densidad que el mercado cotiza. Equities: skew (`σ_impl(K<S) > σ_impl(K>S)`). FX pareja: smile simétrico.
+La **forma** de la sonrisa es la densidad que el mercado cotiza. Equities: skew (\(\sigma _{\text{impl}}(K<S) > \sigma _{\text{impl}}(K>S)\)). FX pareja: smile simétrico.
 
 → volatilidad_implícita (C2) · breeden_litzenberger (C2) · heston · risk_reversal
 
@@ -1276,15 +1280,15 @@ privilegiado.
 <details><summary>más</summary>
 
 Las tres causas se traducen en tres parámetros de modelo distintos, y por eso importa distinguirlas:
-el leverage effect se fabrica con `ρ < 0`, la kurtosis con vol-of-vol, y el gap con un proceso de
+el leverage effect se fabrica con \(\rho < 0\), la kurtosis con vol-of-vol, y el gap con un proceso de
 saltos.
-Ej.: la superficie cruda `σ(K,T)` tiene `N_K × N_T` números: describe, pero no tiene dinámica.
+Ej.: la superficie cruda \(\sigma (K,T)\) tiene \(N_K \times N_T\) números: describe, pero no tiene dinámica.
 Lo que se busca son modelos que la generen desde pocos parámetros interpretables.
 
 </details>
 
 ### Las tres curas para σ  [C3 §1]
-`σ(S,t)` determinista (**vol local**, §2) · σ con vida propia (**vol estocástica**, §3–§4) · el precio **salta** (§4).
+\(\sigma (S,t)\) determinista (**vol local**, §2) · σ con vida propia (**vol estocástica**, §3–§4) · el precio **salta** (§4).
 
 → vol_local · heston · sabr · merton_jumps
 
@@ -1300,14 +1304,14 @@ velocidad.
 ## §2 Volatilidad local: Dupire
 
 ### La idea de Dupire  [C3 §2]
-`dS = r·S·dt + σ_local(S,t)·S·dW`: un solo browniano, pero σ es una **función**, no un número. Se **lee** de los precios, no se optimiza.
+\(dS = r\cdot S\cdot dt + \sigma _{\text{local}}(S,t)\cdot S\cdot dW\): un solo browniano, pero σ es una **función**, no un número. Se **lee** de los precios, no se optimiza.
 
 → breeden_litzenberger (C2) · formula_de_dupire · sticky_strike
 
 <details><summary>más</summary>
 
 Por qué es posible: por Breeden-Litzenberger los precios de opciones contienen la densidad de
-`S_T` para *cada* vencimiento; con las densidades marginales a todos los plazos, la difusión que
+\(S_T\) para *cada* vencimiento; con las densidades marginales a todos los plazos, la difusión que
 las genera queda determinada. Es un problema inverso: de las marginales al proceso.
 Ej.: calibración **perfecta por construcción** (error cero contra la superficie de hoy). Es el
 benchmark contra el que se mide todo lo demás y la base del pricing de exóticos en equity.
@@ -1315,7 +1319,7 @@ benchmark contra el que se mide todo lo demás y la base del pricing de exótico
 </details>
 
 ### La fórmula de Dupire  [C3 §2]
-`σ²_local(K,T) = (2·∂C/∂T) / (K²·∂²C/∂K²)`.
+\(\sigma ^2_{\text{local}}(K,T) = (2\cdot \partial C/\partial T) / (K^2\cdot \partial ^2C/\partial K^2)\).
 
 → breeden_litzenberger (C2) · calendar_spread (C2) · butterfly (C2)
 
@@ -1325,7 +1329,7 @@ Todo el contenido es de C2: el **denominador** es la densidad (el butterfly) y e
 el valor del tiempo extra (el calendar spread). σ_local² es cuánta difusión hace falta en (K,T)
 para explicar cómo fluye la probabilidad.
 Costo práctico: exige derivar **dos veces** precios ruidosos, así que hay que suavizar/interpolar
-la superficie antes. Y si la superficie viola el no-arbitraje de butterfly o de calendar, `σ²`
+la superficie antes. Y si la superficie viola el no-arbitraje de butterfly o de calendar, \(\sigma ^2\)
 sale negativa.
 Ej.: los argumentos (K,T) son las coordenadas de la superficie de *hoy*; (S,t) en la SDE son
 dónde va a estar el camino simulado *mañana*.
@@ -1340,7 +1344,7 @@ Calibración perfecta hoy ≠ dinámica correcta mañana.
 <details><summary>más</summary>
 
 Vol local predice que si el spot sube, la sonrisa se queda pegada a los **strikes** viejos
-(sticky strike): la curva `σ(K)` no se mueve, así que en el nuevo ATM da una vol más chica y el
+(sticky strike): la curva \(\sigma (K)\) no se mueve, así que en el nuevo ATM da una vol más chica y el
 modelo predice que subir aplana el skew. El mercado hace otra cosa: la sonrisa **viaja con el
 spot** conservando su forma relativa al ATM (sticky moneyness).
 Ej.: con el spot de 100 → 110, la diferencia entre las dos predicciones en el nuevo ATM es de
@@ -1352,7 +1356,7 @@ recuerda la forma del riesgo relativo al precio de hoy.
 ## §3 Volatilidad estocástica: Heston
 
 ### Modelo de Heston  [C3 §3]
-`dS = rS dt + √v·S dW¹`, `dv = κ(θ−v)dt + ξ√v dW²`, `dW¹dW² = ρ dt`. La varianza es un proceso CIR.
+\(dS = rS dt + \sqrt{v}\cdot S dW^1\), \(dv = \kappa (\theta -v)dt + \xi \sqrt{v} dW^2\), \(dW^1dW^2 = \rho dt\). La varianza es un proceso CIR.
 
 → CIR · vol_of_vol · smile · vasicek_CIR
 
@@ -1360,7 +1364,7 @@ recuerda la forma del riesgo relativo al precio de hoy.
 
 Los 5 parámetros, cada uno controla algo visible: **κ** velocidad de reversión hacia θ (el
 resorte); **θ** varianza de largo plazo; **ξ** vol-of-vol (curtosis / curvatura del smile);
-**ρ** correlación precio-vol (el skew, `ρ < 0` en equities); **v₀** varianza inicial (casi
+**ρ** correlación precio-vol (el skew, \(\rho < 0\) en equities); **v₀** varianza inicial (casi
 observable).
 Ej.: es el mismo proceso de reversión a la media que la tasa corta de §5 — la varianza de Heston
 *es* un CIR.
@@ -1374,28 +1378,28 @@ En BS el smile es un parche; en Heston es una **consecuencia** de la dinámica.
 
 <details><summary>más</summary>
 
-`ρ < 0` genera el skew: las caídas de precio vienen con subas de varianza, se amplifican, la
-distribución de `S_T` queda sesgada a la izquierda y las puts OTM valen más.
-`ξ > 0` genera la curvatura: varianza aleatoria = mezcla de lognormales con distintas σ ⇒ colas
+\(\rho < 0\) genera el skew: las caídas de precio vienen con subas de varianza, se amplifican, la
+distribución de \(S_T\) queda sesgada a la izquierda y las puts OTM valen más.
+\(\xi > 0\) genera la curvatura: varianza aleatoria = mezcla de lognormales con distintas σ ⇒ colas
 pesadas de los dos lados ⇒ suben las dos alas (el butterfly de C2).
-`κ` y `θ` generan la estructura temporal: si `v₀ < θ`, la vol implícita crece con T; el smile
+\(\kappa\) y \(\theta\) generan la estructura temporal: si \(v_0 < \theta\), la vol implícita crece con T; el smile
 corto es pronunciado y el largo se aplana por promediación.
 
 </details>
 
 ### Pricing y calibración de Heston  [C3 §3]
-`C(K,T) = S·P₁ − K·e^{−rT}·P₂`, con `P₁, P₂` por inversión de Fourier: milisegundos por precio.
+\(C(K,T) = S\cdot P_1 - K\cdot e^{-rT}\cdot P_2\), con \(P_1, P_2\) por inversión de Fourier: milisegundos por precio.
 
 → heston · nelson_siegel (C1) ⚡ · SLV
 
 <details><summary>más</summary>
 
-La función característica de `ln S_T` tiene forma cerrada, así que queda una integral 1D numérica
+La función característica de \(\ln S_T\) tiene forma cerrada, así que queda una integral 1D numérica
 — por eso es calibrable contra miles de opciones, a diferencia de Monte Carlo.
-Calibrar es `min Σ [σ_impl^modelo − σ_impl^mercado]²` sobre la superficie: problema no convexo con
+Calibrar es \(\min \sum [\sigma _{\text{impl}}^{\text{modelo}} - \sigma _{\text{impl}}^{\text{mercado}}]^2\) sobre la superficie: problema no convexo con
 parámetros parcialmente degenerados (κ vs. ξ), así que necesita puntos iniciales y cotas. Es el
 mismo flujo que la NSS de C1: datos → modelo paramétrico → optimización. ⚡
-Ej.: lo que Heston **no** arregla: 5 parámetros contra `N_K × N_T` datos no dan ajuste perfecto,
+Ej.: lo que Heston **no** arregla: 5 parámetros contra \(N_K \times N_T\) datos no dan ajuste perfecto,
 y una difusión pura no alcanza a fabricar el skew de plazo cortísimo.
 
 </details>
@@ -1403,7 +1407,7 @@ y una difusión pura no alcanza a fabricar el skew de plazo cortísimo.
 ## §4 SABR, híbridos y saltos
 
 ### SABR (Hagan et al., 2002)  [C3 §4]
-`dF = σF^β dW`, `dσ = ν σ dZ`, `dW dZ = ρ dt`. Su arma es una **fórmula algebraica** para `σ_impl(K,T)`.
+\(dF = \sigma F^\beta dW\), \(d\sigma = \nu \sigma dZ\), \(dW dZ = \rho dt\). Su arma es una **fórmula algebraica** para \(\sigma _{\text{impl}}(K,T)\).
 
 → heston · swaptions (C2) · smile
 
@@ -1420,7 +1424,7 @@ densidades negativas lejos del dinero.
 </details>
 
 ### Merton jump-diffusion  [C3 §4]
-`dS/S = μ dt + σ dW + (Y−1)dN`: difusión de siempre + saltos contados por un Poisson de intensidad λ.
+\(dS/S = \mu dt + \sigma dW + (Y-1)dN\): difusión de siempre + saltos contados por un Poisson de intensidad λ.
 
 → causas_del_skew · heston · supuestos_BS (C2)
 
@@ -1428,7 +1432,7 @@ densidades negativas lejos del dinero.
 
 Solución: el GBM de siempre multiplicado por el producto de los saltos ocurridos.
 El precio es una **suma de Poisson de precios Black-Scholes**:
-`C = Σ_n [e^{−λ'T}(λ'T)^n/n!]·BS(S,K,T,r_n,σ_n)` — "condicional en que hubo n saltos, es un BS con
+\(C = \sum _n [e^{-\lambda 'T}(\lambda 'T)^n/n!]\cdot BS(S,K,T,r_n,\sigma _n)\) — "condicional en que hubo n saltos, es un BS con
 vol y tasa ajustadas", promediado sobre el Poisson.
 Ej.: un salto es un **gap** que ninguna difusión continua puede generar; por eso Merton produce
 skew negativo incluso a 1 semana de plazo, justo donde Heston se queda corto.
@@ -1436,7 +1440,7 @@ skew negativo incluso a 1 semana de plazo, justo donde Heston se queda corto.
 </details>
 
 ### Híbridos y frontera: SLV y rough vol  [C3 §4]
-**SLV** = σ_local × factor estocástico (calibración exacta de Dupire + dinámica decente de Heston). **Rough vol** = browniano fraccionario con `H ≈ 0.1`.
+**SLV** = σ_local × factor estocástico (calibración exacta de Dupire + dinámica decente de Heston). **Rough vol** = browniano fraccionario con \(H \approx 0.1\).
 
 → vol_local · heston · sticky_strike
 
@@ -1453,7 +1457,7 @@ tratabilidad.
 ## §5 Modelos de tasa corta
 
 ### Por qué la tasa necesita su propio modelo  [C3 §5]
-No es una acción: **revierte** a un nivel, puede ser ~0 o negativa, y lo que se valúa depende del **camino**: `P(t,T) = E^Q[e^{−∫r(s)ds}]`.
+No es una acción: **revierte** a un nivel, puede ser ~0 o negativa, y lo que se valúa depende del **camino**: \(P(t,T) = E^Q[e^{-\int r(s)ds}]\).
 
 → GBM (C2) · vasicek_CIR · hull_white · curva_de_rendimiento (C1)
 
@@ -1466,29 +1470,29 @@ Ej.: con la curva de C1 como condición de contorno, todo el curso converge acá
 </details>
 
 ### Vasicek y CIR  [C3 §5]
-`dr = κ(θ−r)dt + σ dW` (Vasicek, gaussiano) · `dr = κ(θ−r)dt + σ√r dW` (CIR, `r ≥ 0`).
+\(dr = \kappa (\theta -r)dt + \sigma dW\) (Vasicek, gaussiano) · \(dr = \kappa (\theta -r)dt + \sigma \sqrt{r} dW\) (CIR, \(r \ge 0\)).
 
 → heston · hull_white · bono
 
 <details><summary>más</summary>
 
-Vasicek: solución gaussiana exacta, half-life de la reversión `ln2/κ`, precio de bono analítico
-en forma afín `P(t,T) = A(t,T)·e^{−B(t,T)·r}`. Su defecto célebre es que r puede ser negativa —
+Vasicek: solución gaussiana exacta, half-life de la reversión \(\ln2/\kappa\), precio de bono analítico
+en forma afín \(P(t,T) = A(t,T)\cdot e^{-B(t,T)\cdot r}\). Su defecto célebre es que r puede ser negativa —
 que después de la era europea pasó de bug a feature.
-CIR: el `√r` apaga el ruido cuando `r → 0`, así que la tasa no cruza el cero (la misma condición
+CIR: el \(\sqrt{r}\) apaga el ruido cuando \(r \to 0\), así que la tasa no cruza el cero (la misma condición
 que la varianza de Heston: es el mismo proceso).
-Ej.: defecto compartido — son **endógenos**: su `P(0,T)` no coincide con la curva de mercado de hoy.
+Ej.: defecto compartido — son **endógenos**: su \(P(0,T)\) no coincide con la curva de mercado de hoy.
 
 </details>
 
 ### Hull-White  [C3 §5]
-`dr = [θ(t) − a·r]dt + σ dW`, con `θ(t)` **despejada** de la curva forward observada, no estimada.
+\(dr = [\theta (t) - a\cdot r]dt + \sigma dW\), con \(\theta (t)\) **despejada** de la curva forward observada, no estimada.
 
 → vasicek_CIR · nelson_siegel (C1) ⚡ · vol_local ⚡
 
 <details><summary>más</summary>
 
-`θ(t) = ∂f(0,t)/∂t + a·f(0,t) + σ²(1−e^{−2at})/(2a)`. Resultado: `P(0,T)` del modelo = `P(0,T)`
+\(\theta (t) = \partial f(0,t)/\partial t + a\cdot f(0,t) + \sigma ^2(1-e^{-2at})/(2a)\). Resultado: \(P(0,T)\) del modelo = \(P(0,T)\)
 del mercado exactamente, para todo T. La curva de C1 (NSS) entra como input y el modelo la
 respeta por construcción; sigue siendo afín, así que bonos, caps y swaptions tienen fórmula
 cerrada. Es el modelo de los sistemas de riesgo de tasa de los bancos.
@@ -1501,30 +1505,30 @@ dinámica correcta mañana. ⚡
 ## §6 Crédito estructural: el modelo de Merton
 
 ### El balance como posición en opciones  [C3 §6]
-Activos `V_t` siguen un GBM y la deuda es un pago único D en T ⇒ **equity = call sobre los activos** (strike D) y **deuda = bono seguro − put**.
+Activos \(V_t\) siguen un GBM y la deuda es un pago único D en T ⇒ **equity = call sobre los activos** (strike D) y **deuda = bono seguro − put**.
 
 → call_put (C1) · Black-Scholes (C2) · CDS (C1) · distancia_al_default
 
 <details><summary>más</summary>
 
-`E_T = max(V_T − D, 0)` y `D_T = min(V_T, D) = D − max(D − V_T, 0)`: en T, si `V > D` los
+\(E_T = \max(V_T - D, 0)\) y \(D_T = \min(V_T, D) = D - \max(D - V_T, 0)\): en T, si \(V > D\) los
 accionistas pagan la deuda y se quedan el resto; si no, entregan la firma.
 Todo C2 aplica de inmediato: el **spread crediticio ES la prima de ese put**. Y explica
-incentivos: más riesgo (`σ_V ↑`) sube el call (accionistas) y baja la deuda (acreedores) — el
+incentivos: más riesgo (\(\sigma _V \uparrow\)) sube el call (accionistas) y baja la deuda (acreedores) — el
 conflicto de agencia, en una fórmula.
 
 </details>
 
 ### Distancia al default y PD  [C3 §6]
-`E = V·N(d₁) − D·e^{−rT}·N(d₂)`, con `DD = d₂` ("a cuántos sigmas está la quiebra") y `PD = N(−d₂)`.
+\(E = V\cdot N(d_1) - D\cdot e^{-rT}\cdot N(d_2)\), con \(DD = d_2\) ("a cuántos sigmas está la quiebra") y \(PD = N(-d_2)\).
 
 → balance_como_opciones · d1_d2 (C2) · CDS (C1)
 
 <details><summary>más</summary>
 
-El problema práctico: `V` y `σ_V` no se observan; lo que se ve es `E` (market cap) y `σ_E`
+El problema práctico: \(V\) y \(\sigma _V\) no se observan; lo que se ve es \(E\) (market cap) y \(\sigma _E\)
 (vol del equity). Dos ecuaciones, dos incógnitas ⇒ sistema no lineal ⇒ `fsolve`.
-Ej.: con `V₀=130, D=100, σ_V=25%, T=1a` sale `DD = 1.12` sigmas y `PD = N(−DD) = 13%` — es la masa
+Ej.: con \(V_0=130, D=100, \sigma _V=25\%, T=1a\) sale \(DD = 1.12\) sigmas y \(PD = N(-DD) = 13\%\) — es la masa
 lognormal que queda por debajo de D.
 
 </details>
@@ -1538,7 +1542,7 @@ El trade-off es siempre **calibración vs. dinámica vs. velocidad**.
 
 <details><summary>más</summary>
 
-**Tasas:** Vasicek (analítico, punto de partida conceptual) · CIR (`r ≥ 0`, chi², el clásico
+**Tasas:** Vasicek (analítico, punto de partida conceptual) · CIR (\(r \ge 0\), chi², el clásico
 académico) · Hull-White (calibra exacto la curva → estándar de riesgo de tasa en bancos) ·
 HJM/LMM (toda la curva forward → exóticos de tasas) · SABR(-LMM) (el smile de swaptions).
 **Volatilidad y crédito:** vol local/Dupire (calibración perfecta, mala dinámica; interpolador y
@@ -1550,7 +1554,7 @@ académica) · Merton/KMV (crédito estructural; forma reducida para CDS).
 
 ## ⬜ Conceptos de C3 por completar (no cubiertos en el teórico)
 
-**§1:** term structure de la vol · superficie `σ(K,T)` cruda
+**§1:** term structure de la vol · superficie \(\sigma (K,T)\) cruda
 
 **§2:** suavizado/interpolación de la superficie · condiciones de no-arbitraje sobre σ_local · exóticos de equity con vol local
 

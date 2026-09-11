@@ -287,7 +287,8 @@
   .content a:hover { border-bottom-color: var(--accent); }
 
   /* ── Special markers ── */
-  .content h3 code { background: none; font-size: 12px; color: var(--text-muted); font-weight: 400; }
+  .content .katex { font-size: 1.02em; }
+  .content h3 .katex { font-size: .95em; }
 
   /* Style the → connection lines */
   .content p { word-wrap: break-word; }
@@ -491,7 +492,15 @@
   // Configure marked
   marked.setOptions({ gfm: true, breaks: false });
 
-  const raw = marked.parse(md);
+  // Proteger las fórmulas \( \) y \[ \] de marked (trataría \( como escape, y _ * <
+  // como énfasis/HTML). Se reemplazan por placeholders y se restauran escapadas.
+  const mathStore = [];
+  const protectedMd = md.replace(/\\\((.+?)\\\)|\\\[([\s\S]+?)\\\]/g, m => {
+    mathStore.push(m);
+    return `@@MATH${mathStore.length - 1}@@`;
+  });
+  const escapeHtml = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const raw = marked.parse(protectedMd).replace(/@@MATH(\d+)@@/g, (_, i) => escapeHtml(mathStore[+i]));
   const content = document.getElementById('content');
   content.innerHTML = raw;
 
@@ -683,7 +692,7 @@
     header.appendChild(chevron);
 
     const label = document.createElement('span');
-    label.textContent = h1.textContent.replace(/\[C\d.*?\]/g, '').trim();
+    label.textContent = searchText(h1).replace(/\[C\d.*?\]/g, '').trim();
     header.appendChild(label);
 
     const subHeadings = section.querySelectorAll('h2, h3');
@@ -702,7 +711,7 @@
     sublist.className = 'toc-sublist';
 
     subHeadings.forEach(h => {
-      const text = h.textContent.replace(/\[C\d.*?\]/g, '').trim();
+      const text = searchText(h).replace(/\[C\d.*?\]/g, '').trim();
       if (!text) return;
 
       const a = document.createElement('a');
@@ -776,7 +785,6 @@
     return pick(containsSeq, eqExact) || pick(containsSeq, eqStem) || pick(containsAll, eqPrefix);
   };
 
-  const escapeHtml = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const withBolt = s => escapeHtml(s).replace(/⚡/g, '<span class="bolt-mark">⚡</span>');
 
   content.querySelectorAll('p.arrow-line').forEach(p => {
