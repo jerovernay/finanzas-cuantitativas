@@ -352,6 +352,32 @@
   }
   .content details p { margin: .35rem 0; font-size: 14px; }
 
+  /* ── "Idea general": la tapa de cada clase ── */
+  .content .overview {
+    background: var(--accent-light);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: .9rem 1.1rem 1rem;
+    margin: 1rem 0 1.75rem;
+  }
+  .content .overview h2 {
+    margin: 0 0 .5rem;
+    font-size: .8rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .content .overview p { max-width: none; }
+  .content .overview strong { color: var(--accent); }
+  .content .overview blockquote {
+    margin: .75rem 0 0;
+    background: var(--bg);
+    border-left-color: var(--accent);
+  }
+  /* la búsqueda oculta el h2 + su cuerpo; la card no debe quedar vacía */
+  .content .overview:has(> h2.hidden) { display: none; }
+
   .question-block {
     border-left: 3px solid var(--question);
     background: var(--question-bg);
@@ -498,6 +524,21 @@
 
   // Style ⚡ marks
   content.innerHTML = content.innerHTML.replace(/⚡/g, '<span class="bolt-mark">⚡</span>');
+
+  // ── "Idea general": la tapa de cada clase se envuelve en una card ──
+  content.querySelectorAll('h2').forEach(h2 => {
+    if (!/^idea general/i.test(h2.textContent.trim())) return;
+    const card = document.createElement('div');
+    card.className = 'overview';
+    h2.parentNode.insertBefore(card, h2);
+    card.appendChild(h2);
+    let sib = card.nextSibling;
+    while (sib && !(sib.nodeType === 1 && ['H1', 'H2', 'H3'].includes(sib.tagName))) {
+      const move = sib;
+      sib = sib.nextSibling;
+      card.appendChild(move);
+    }
+  });
 
   // ── Wrap sections by h1 for filtering ──
   const h1s = content.querySelectorAll('h1');
@@ -651,7 +692,10 @@
     count.textContent = subHeadings.length;
     header.appendChild(count);
 
-    header.addEventListener('click', () => group.classList.toggle('open'));
+    header.addEventListener('click', () => {
+      if (group.classList.contains('open')) group.classList.remove('open');
+      else openOnly(group);
+    });
     group.appendChild(header);
 
     const sublist = document.createElement('ul');
@@ -685,8 +729,10 @@
     tocGroups.push({ el: group, header, section });
   });
 
-  // first clase open by default, rest collapsed
-  if (tocGroups.length) tocGroups[0].el.classList.add('open');
+  // Acordeón: en todo momento hay un solo grupo abierto (el de la clase que se lee).
+  const openOnly = groupEl => tocGroups.forEach(g => g.el.classList.toggle('open', g.el === groupEl));
+  const activeGroup = () => tocGroups.find(g => g.header.classList.contains('active-group')) || tocGroups[0];
+  if (tocGroups.length) openOnly(tocGroups[0].el);
 
   // ── Links en las líneas → : cada token se resuelve al heading que lo explica ──
   const words = s => norm(s.replace(/[₀-₉]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x2080 + 48)))
@@ -768,8 +814,9 @@
           t.el.classList.toggle('active', t.heading.id === id);
         });
         tocGroups.forEach(g => {
-          g.header.classList.toggle('active-group', g.section === activeSection);
-          if (g.section === activeSection) g.el.classList.add('open');
+          const isActive = g.section === activeSection;
+          g.header.classList.toggle('active-group', isActive);
+          g.el.classList.toggle('open', isActive);
         });
       }
     });
@@ -809,16 +856,17 @@
         }
       });
 
-      // update TOC groups: show/hide + auto-expand the matching one
-      tocGroups.forEach(g => {
-        if (c === 'Todas') {
-          g.el.style.display = '';
-        } else {
+      // update TOC groups: show/hide + expand only the matching one (or the active one for "Todas")
+      if (c === 'Todas') {
+        tocGroups.forEach(g => { g.el.style.display = ''; });
+        openOnly(activeGroup().el);
+      } else {
+        tocGroups.forEach(g => {
           const match = g.section.dataset.clase === c || g.section.dataset.clase2 === c;
           g.el.style.display = match ? '' : 'none';
-          if (match) g.el.classList.add('open');
-        }
-      });
+          g.el.classList.toggle('open', match);
+        });
+      }
     });
     filters.appendChild(btn);
   });
@@ -833,10 +881,8 @@
 
     if (!q) {
       showAllBlocks();
-      tocGroups.forEach((g, i) => {
-        g.el.style.display = '';
-        g.el.classList.toggle('open', i === 0);
-      });
+      tocGroups.forEach(g => { g.el.style.display = ''; });
+      openOnly(activeGroup().el);
       return;
     }
 

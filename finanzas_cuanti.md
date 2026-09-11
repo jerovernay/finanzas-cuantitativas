@@ -12,12 +12,6 @@
 (VSCode / Claude Code). Cuando arranques un chat nuevo con Claude, pegalo o subilo:
 es el mecanismo de continuidad (Claude no recuerda entre conversaciones).
 
-**Flujo de captura.**
-1. Después de cada clase, le pasás a Claude el texto de las slides o tus notas.
-2. Claude devuelve las entradas nuevas en este formato.
-3. Las pegás acá.
-4. Cuando estudiás, le pedís a Claude que renderice la vista que quieras
-   (glosario de una clase, submapa de un tema, checklist para un parcial).
 
 **Formato de una entrada — dos niveles.** Lo que se lee siempre es la primera línea;
 el *por qué* y el ejemplo viven plegados, a un clic.
@@ -34,6 +28,15 @@ Ej.: caso concreto con números o un evento real que muestre por qué importa.
 
 </details>
 ```
+
+**La tapa de cada clase — `## Idea general`.** Antes del primer concepto, cada `# Ci` abre
+con un bloque en prosa, sin fórmulas, con tres partes fijas:
+- **En una frase.** Qué idea deja la clase, dicha en palabras simples.
+- **Qué problema del mercado resuelve.** Para qué lo usa un desk / por qué existe.
+- **Cómo conecta.** Hacia atrás (qué clases anteriores usa), hacia adelante (dónde reaparece)
+  y el patrón transversal ⚡ si lo hay.
+Es lo que se lee *antes* de entrar a los nodos, y lo que hay que poder repetir de memoria
+después. Si no podés resumir la clase en esas tres partes, no la entendiste todavía.
 
 **Convenciones.**
 - `[C2 §2]` = clase 2, sección 2 de las slides. Para filtrar una clase, buscá `[C2`.
@@ -67,7 +70,29 @@ en cada clase: duration/convexidad (bonos) → DV01/convexidad (swaps) → delta
 
 # C1 — Introducción: mercados, tasas, FX y curvas
 
-> El arco de la clase: qué se opera → quién lo opera → el precio del tiempo (tasas) →
+## Idea general
+
+**En una frase.** Todo lo que se opera en un mercado es una promesa de plata futura, y la
+herramienta central de la materia es una sola: **descontar** — traducir plata de mañana a
+plata de hoy usando la tasa que el mercado exige para ese plazo y ese riesgo.
+
+**Qué problema del mercado resuelve.** Nadie te dice cuánto vale un bono, un swap o un forward
+de moneda: hay que *construirlo*. La clase arma la caja de herramientas mínima para eso:
+qué instrumentos existen y quién los opera, qué es una tasa (simple, compuesta, continua) y
+por qué hay una distinta por cada plazo (la curva), cómo extraer esa curva de los precios que
+sí se ven (bootstrapping, Nelson-Siegel) y cómo usarla para ponerle precio a un swap y a un
+forward de FX (CIP). El resultado práctico es poder decir "este swap vale X y pierde Y si la
+curva sube 1bp".
+
+**Cómo conecta.** Hacia adelante: el factor de descuento `P(0,T)` es el ladrillo que usa
+*todo* el pricing de C2 y C3 (la `K·e^{−rT}` de Black-Scholes es la misma curva). La CIP es
+la primera aparición del argumento de **no-arbitraje** — dos caminos sin riesgo tienen que
+rendir lo mismo — que en C2 se convierte en la put-call parity. Y calibrar Nelson-Siegel es
+el mismo flujo (datos → modelo paramétrico → optimización) que calibrar Heston en C3 ⚡.
+El patrón matemático que se repite: duration = primera derivada, convexidad = segunda;
+en C2 se van a llamar delta y gamma ⚡.
+
+> Arco de la clase: qué se opera → quién lo opera → el precio del tiempo (tasas) →
 > el mercado FX → construir y calibrar la curva de tasas → usarla para valuar un swap.
 > Objetivo declarado: *calibrar una curva de rendimientos real y valuar swaps.*
 
@@ -544,10 +569,34 @@ traduce el riesgo de tasa a dinero concreto.
 
 # C2 — Opciones y Black-Scholes
 
-> *Pricing I: del no-arbitraje al primer modelo.* Cuatro bloques, y el orden es el argumento:
-> §1 repaso de bonos (la Taylor que vuelve) → §2 todo lo que se puede decir de las opciones
-> **sin modelo** (solo no-arbitraje) → §3 el aparato estocástico (Browniano, Itô, GBM, Girsanov)
-> → §4 Black-Scholes, las griegas y por qué su σ constante es mentira.
+## Idea general
+
+**En una frase.** Una opción es un *derecho* (no una obligación), y ponerle precio a un
+derecho es el problema fundacional de las finanzas cuantitativas: la clase muestra primero
+todo lo que se puede decir **sin ningún modelo** (solo prohibiendo la plata gratis) y después
+el primer modelo que da un número, Black-Scholes.
+
+**Qué problema del mercado resuelve.** Cómo se le pone precio a las cosas en el mercado. La
+respuesta tiene dos capas. La primera es el **no-arbitraje**: si dos portafolios pagan lo
+mismo pase lo que pase, tienen que costar lo mismo hoy — de ahí salen las cotas, la put-call
+parity, y la sorpresa de que los precios de las opciones ya contienen una distribución de
+probabilidad completa (Breeden-Litzenberger). La segunda capa es el **modelo**: para pasar de
+cotas a un precio hace falta describir cómo se mueve el subyacente (browniano, Itô, GBM) y ahí
+aparece la idea clave del curso — cubrir el riesgo con delta-hedging hace que el precio no
+dependa de cuánto creés que va a subir la acción, solo de cuánto se *mueve* (σ). Las griegas
+son el tablero de ese hedge: qué riesgo te queda después de cubrir la dirección.
+
+**Cómo conecta.** Hacia atrás: la tasa `r` y el descuento vienen de C1; la tasa implícita
+de las opciones es la CIP con otro disfraz ⚡; delta y gamma son duration y convexidad ⚡.
+Hacia adelante: la clase termina mostrando que la σ de Black-Scholes **no es constante**
+(smile), y eso es literalmente el programa de C3. Volatilidad como cosa que se compra y se
+vende (trading de vol) es el puente entre pricing y trading que reaparece en toda la Unidad 2.
+
+> Arco de la clase — *Pricing I: del no-arbitraje al primer modelo.* Cuatro bloques, y el
+> orden es el argumento: §1 repaso de bonos (la Taylor que vuelve) → §2 todo lo que se puede
+> decir de las opciones **sin modelo** (solo no-arbitraje) → §3 el aparato estocástico
+> (Browniano, Itô, GBM, Girsanov) → §4 Black-Scholes, las griegas y por qué su σ constante
+> es mentira.
 
 ## §1 Bonos: repaso
 
@@ -1170,8 +1219,32 @@ Las opciones se inventaron para Hedgearse. La opcion sirve para cubrirse , pero 
 
 # C3 — Volatilidad, tasas y crédito
 
-> *Pricing II: cuando Black-Scholes no alcanza.*
-> El arco: §1 por qué falla BS (el smile como diagnóstico) → §2 vol local (Dupire) →
+## Idea general
+
+**En una frase.** Black-Scholes supone que σ es una constante, y el mercado dice que no.
+Esta clase es un catálogo de **parches** a BS, cada uno para un problema puntual: Dupire
+arregla la σ como función, Heston le da vida propia, Merton agrega saltos, Vasicek/CIR/
+Hull-White hacen lo mismo para la tasa, y Merton-crédito usa la maquinaria de opciones para
+leer el riesgo de quiebra de una empresa.
+
+**Qué problema del mercado resuelve.** Un desk no puede pricear exóticos, swaptions ni deuda
+corporativa con un solo número de vol: necesita que el modelo reproduzca la sonrisa que
+cotiza la pantalla (Dupire / Heston / SABR), que admita gaps (Merton jumps), que sepa que la
+tasa revierte a un nivel y puede ser ~0 (modelos de tasa corta) y que lea la probabilidad de
+default desde el precio de la acción (Merton crédito). Ningún modelo gana en todo: el
+criterio de elección es siempre el trade-off **calibración vs. dinámica vs. velocidad**, y
+la §7 es el mapa de qué modelo usa cada mesa.
+
+**Cómo conecta.** Hacia atrás: todo sale de C2 — el smile es la densidad de
+Breeden-Litzenberger, la fórmula de Dupire es butterfly sobre calendar, la varianza de Heston
+es el mismo proceso CIR de la tasa, y el balance de una empresa es una call sobre sus
+activos. Hacia adelante: la superficie σ(K,T) es un input de riesgo (C5) y un feature para ML
+(C6). Patrón repetido ⚡: **promover un parámetro a función y calibrarlo a los datos de hoy**
+(NSS en C1 → Dupire → Hull-White) compra ajuste perfecto hoy a cambio de dinámica dudosa
+mañana (sticky strike).
+
+> Arco de la clase — *Pricing II: cuando Black-Scholes no alcanza.*
+> §1 por qué falla BS (el smile como diagnóstico) → §2 vol local (Dupire) →
 > §3 vol estocástica (Heston) → §4 SABR, híbridos y saltos (Merton) → §5 modelos de tasa corta
 > (Vasicek/CIR/Hull-White) → §6 crédito estructural (Merton) → §7 el mapa de qué desk usa qué.
 
@@ -1489,47 +1562,61 @@ académica) · Merton/KMV (crédito estructural; forma reducida para CDS).
 
 **§6:** forma reducida (intensidad de default) vs. estructural · KMV en la práctica · del Z-spread (C1) a la PD
 
-## Notas de clase -- Volatilidad, tasas y crédito
-
-*§1 smile:*
-
-*§2 Dupire:*
-
-*§3 Heston:*
-
-*§4 SABR / saltos / híbridos:*
-
-*§5 tasa corta:*
-
-*§6 crédito estructural:*
-
-*§7 mapa de modelos:*
-
 
 ## ❓ Dudas de C3
 
 La volatilidad como un asset a tner en cuenta en el trade. 
 
-Grafico de Sticky strike vs. sticky moneyness
+En que sentido es malo "pagar velocidad o tratabilidad" -> Adapatacion del modelo o problema ante la ejecucion.
 
-En que sentido es malo "pagar velocidad o tratabilidad"
+Conviene un modelo que quiza tarde mas, pero precise en tiempos distintos? Puede un modelo adapatarse bien a una consecuencia temporal, peor ser malo en maoyores y menores?
 
-Conviene un modelo que quiza tarde mas, pero precise en tiempos distintos?
-
-
+P34 -> Mapa de comparacion de los metodos
 ---
 
 # C4 — Factores
-⬜ Pendiente. (Riesgo sistemático de C1 y beta reaparecen acá.)
+
+## Idea general
+
+⬜ Por completar al cursar. Hipótesis desde el programa: los retornos de miles de acciones
+se explican con **pocas fuentes de riesgo comunes** (mercado, tamaño, value, momentum…) y
+no acción por acción. El beta de C1 es el primer factor; acá se generaliza. Conecta con C5
+(un portfolio se arma sobre exposiciones a factores, no sobre nombres) y con C6 (un factor
+es, en el fondo, un feature con prima).
 
 # C5 — Portfolios
-⬜ Pendiente.
+
+## Idea general
+
+⬜ Por completar al cursar. Hipótesis: cómo combinar activos para que el riesgo total sea
+menor que la suma de los riesgos (diversificación), y cómo medir ese riesgo (VaR, Expected
+Shortfall, Basel III). Conecta con C1 (duration/DV01 como riesgo de tasa del portfolio),
+C3 (la superficie de vol como input de riesgo) y C4 (exposición a factores).
 
 # C6 — Machine Learning
-⬜ Pendiente.
+
+## Idea general
+
+⬜ Por completar al cursar. Hipótesis: qué cambia cuando en vez de un modelo con 5
+parámetros interpretables (Heston) usás uno con miles (LSTM, XGBoost, LGBM), y por qué en
+finanzas el overfitting es peor que en otros dominios (poca señal, mucho ruido, series no
+estacionarias — Lopez de Prado). Conecta con C4 (factores como features) y con la Unidad 2
+(pair trading, predicción intradía).
 
 # C7–C8 — Unidad 3 (HFT / baja latencia)
-⬜ Pendiente. (Market maker y LOB de C1 reaparecen acá.)
+
+## Idea general
+
+⬜ Por completar al cursar. Hipótesis: a escala de milisegundos el "precio" deja de ser un
+número y pasa a ser un **libro de órdenes** (LOB); el market maker de C1 vuelve como
+protagonista (Avellaneda-Stoikov), la ejecución de una orden grande es un problema de
+optimización (Almgren-Chriss), y la tecnología (FIX, C++ lock-free) y la regulación
+(spoofing, MiFID II) son parte del modelo, no un detalle.
 
 # C9 — Wrap + presentaciones (póster)
-⬜ Pendiente.
+
+## Idea general
+
+⬜ Por completar al cursar. El cierre: las tres unidades son la misma pregunta (cómo se le
+pone precio al riesgo) a tres escalas de tiempo distintas — años, horas, milisegundos — y el
+trabajo integrador tiene que mostrar ese hilo sobre datos reales.
