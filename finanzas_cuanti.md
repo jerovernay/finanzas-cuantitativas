@@ -60,8 +60,8 @@ después. Si no podés resumir la clase en esas tres partes, no la entendiste to
 | C1 | Introducción: mercados, tasas, FX y curvas | ✅ armada |
 | C2 | Opciones y Black-Scholes | ✅ armada |
 | C3 | Volatilidad, tasas y crédito | ✅ armada |
-| C4 | Factores | ⬜ pendiente |
-| C5 | Portfolios | ⬜ pendiente |
+| C4 | Factores y series temporales (del mundo Q al mundo P) | ✅ armada |
+| C5 | Portfolios (Markowitz, riesgo de cartera) | ⬜ pendiente |
 | C6 | Machine Learning | ⬜ pendiente |
 | C7–C8 | Unidad 3 (HFT / baja latencia) | ⬜ pendiente |
 | C9 | Wrap del curso + presentaciones (formato póster) | ⬜ pendiente |
@@ -69,6 +69,12 @@ después. Si no podés resumir la clase en esas tres partes, no la entendiste to
 **Hilo conductor del curso:** casi todo el riesgo se lee como una **expansión de Taylor**.
 Primera derivada (sensibilidad) y segunda derivada (curvatura) reaparecen con otro nombre
 en cada clase: duration/convexidad (bonos) → DV01/convexidad (swaps) → delta/gamma (opciones). ⚡
+
+**Segundo hilo (aparece en C4):** **pocos factores explican muchas series.** Nelson-Siegel
+resume toda la curva en nivel/pendiente/curvatura (C1) → Heston resume la superficie de vol en
+5 parámetros (C3) → Fama-French resume miles de acciones en 3 factores y PCA *redescubre*
+nivel/pendiente/curvatura desde los datos (C4). Lo que cambia es quién elige los factores:
+el modelador (paramétrico) o los datos (estadístico). ⚡
 
 ---
 
@@ -1578,24 +1584,591 @@ Conviene un modelo que quiza tarde mas, pero precise en tiempos distintos? Puede
 P34 -> Mapa de comparacion de los metodos
 ---
 
-# C4 — Factores
+# C4 — Factores y series temporales: del mundo Q al mundo P
 
 ## Idea general
 
-⬜ Por completar al cursar. Hipótesis desde el programa: los retornos de miles de acciones
-se explican con **pocas fuentes de riesgo comunes** (mercado, tamaño, value, momentum…) y
-no acción por acción. El beta de C1 es el primer factor; acá se generaliza. Conecta con C5
-(un portfolio se arma sobre exposiciones a factores, no sobre nombres) y con C6 (un factor
-es, en el fondo, un feature con prima).
+**En una frase.** Hasta ahora *valuábamos*: el hedge cancelaba μ y solo hacía falta σ. Desde
+hoy *estimamos*: predecir, explicar, armar portfolios y medir el riesgo de mañana son preguntas
+donde nada cancela a μ, y μ es lo más difícil de estimar de todas las finanzas.
+
+**Qué problema del mercado resuelve.** Un desk de trading fabrica payoffs (mundo Q); un fondo,
+un asset manager o un área de riesgo tienen que responder otra cosa: por qué dos acciones
+rinden distinto (CAPM, factores), si el precio de mañana se predice con el de hoy (ARIMA —
+spoiler: no), si el *riesgo* de mañana se predice (GARCH — sí), cómo comprimir muchas series
+correlacionadas en pocos números (PCA de la curva), y qué hacer cuando hay más variables
+candidatas que datos (Ridge/Lasso). La clase entera es una sola pregunta repetida —
+*"¿qué NO sé, y con qué herramienta lo estimo?"* — primero entre acciones distintas (§2–3),
+después en el tiempo de una sola serie (§4–5), con varias series a la vez (§6) y con más
+variables que datos (§7).
+
+**Cómo conecta.** Hacia atrás: P y Q son las dos medidas de Girsanov (C2), y dQ/dP es la
+densidad implícita de Breeden-Litzenberger dividida por la real — el skew de C3 *es* el
+pricing kernel. El AR(1) es la discretización del Vasicek de C3, y GARCH es Heston en tiempo
+discreto: la varianza con vida propia ⚡. PCA redescubre nivel/pendiente/curvatura, los tres
+factores que Nelson-Siegel imponía a mano en C1 ⚡. Hacia adelante: la \(\sigma _t\) de GARCH y
+las exposiciones a factores son los inputs del portfolio de C5; Ridge/Lasso ya son ML y la
+advertencia final (K-fold miente con series de tiempo) es el programa de C6; ARIMA reaparece
+donde sí hay estructura: los spreads del pair trading de la Unidad 2.
+
+> Arco de la clase — *Econometría financiera: de valuar a estimar.*
+> §1 por qué cambia la pregunta (P vs. Q) → §2 CAPM empírico (β, α, SML) → §3 Fama-French y
+> el zoológico → §4 ARIMA y por qué falla en retornos → §5 GARCH y el VaR condicional →
+> §6 PCA de la curva → §7 Ridge y Lasso, el puente al ML.
+
+## §1 Del mundo Q al mundo P
+
+### Retorno simple vs. logarítmico  [C4 §1]
+Simple: \(r_t = (P_t - P_{t-1} + D_t)/P_{t-1}\). Log: \(r_t = \ln(P_t/P_{t-1})\). El log **suma en el tiempo sin error**; el simple no.
+
+→ GBM (C2) · estacionariedad · CAPM
+
+<details><summary>más</summary>
+
+Para movimientos chicos dan casi lo mismo (\(\ln 1.08 \approx 7.7\%\) vs. 8%), pero el log-retorno
+de dos días es la suma de los log-retornos diarios, y eso es lo que hace tratable toda la
+econometría: promedios, varianzas y autocorrelaciones se calculan sobre algo aditivo. Es la
+misma razón por la que en C2 se aplicó Itô a \(\ln S\) y no a \(S\).
+Ej.: comprás a $100, vale $107 y cobrás $1 de dividendo: retorno simple 8%, log ≈ 7.7%.
+
+</details>
+
+### P vs. Q: las dos medidas  [C4 §1]
+**P** = el mundo real (lo que va a pasar). **Q** = el mundo del pricing (cuánto debe costar). La brecha entre las dos **es la prima de riesgo**.
+
+→ girsanov (C2) ⚡ · pricing_neutro_al_riesgo (C2) · dQ_dP · de_valuar_a_estimar
+
+<details><summary>más</summary>
+
+El seguro de la casa: la probabilidad real de incendio es 0.1% anual (P), pero la aseguradora
+cobra como si fuera 0.3% (Q). No es un error: perder la casa duele más de lo que "vale" en
+probabilidad pura, y ese 0.3% inflado ya incorpora la aversión al riesgo. En finanzas es lo
+mismo: bajo P el S&P sube en promedio \(\mu \approx 10\%\); bajo Q el drift es \(r\) y los
+escenarios malos pesan más de lo que realmente son. Los precios de opciones de C2 están
+calculados en Q — por eso "descontar \(E^P\) a la tasa r" daba un precio equivocado.
+Ej.: P pregunta "¿qué va a pasar?"; Q pregunta "¿cuánto debe costar?". Mismo mundo, dos medidas.
+
+</details>
+
+### dQ/dP: el pricing kernel  [C4 §1]
+Derivada de Radon-Nikodym: escenario por escenario, **cuánto más (o menos) peso le pone el mercado** que la realidad. \(dQ/dP > 1\) en los crashes, \(< 1\) en las subas grandes.
+
+→ P_vs_Q · densidad_implícita (C2) · skew_vs_smile (C3) · girsanov (C2)
+
+<details><summary>más</summary>
+
+Es densidad × aversión al riesgo. Bajo lognormal con drift μ y drift r sale una curva
+decreciente en el retorno: alta en las pérdidas grandes (el mercado las trata como mucho más
+probables de lo que son → asegurarse ahí es caro) y por debajo de 1 en las ganancias grandes
+(nadie paga de más por la bonanza). Conexión directa con C2–C3: la \(q(K)\) de
+Breeden-Litzenberger es la densidad bajo Q; dividirla por el histograma real de retornos da
+exactamente este cociente, y el skew de equities de C3 es su firma visible.
+Ej.: en el gráfico de la slide, Q es la misma campana que P corrida a la izquierda y con la
+cola izquierda más gorda; el área entre las dos en la zona de pérdidas es "lo que infla Q".
+
+</details>
+
+### De valuar a estimar  [C4 §1]
+C2–C3 pudieron ignorar μ porque el precio de una opción es el **costo de fabricar el payoff** y el hedge cancela la dirección. Predecir, explicar, armar carteras y medir riesgo **no tienen réplica que salve**: hay que estimar μ.
+
+→ delta_hedging (C2) · CAPM · ARIMA · VaR_condicional
+
+<details><summary>más</summary>
+
+La receta de replicación usa σ (qué tan agitado es el precio, lo que sí importa para fabricar
+el payoff) pero no μ (hacia dónde va en promedio). Cruzar a P significa que cambia la
+*pregunta*, no el activo: P es lo que estima un histograma de retornos históricos, y desde acá
+cada sección de la clase es una versión de "¿qué no sé y con qué lo estimo?".
+Ej.: un market maker de opciones vive en Q y nunca opina sobre μ; un fondo que arma un
+portfolio vive en P y no puede evitar opinar.
+
+</details>
+
+## §2 CAPM como modelo empírico
+
+### CAPM y la Security Market Line  [C4 §2]
+\(E[r_i] = r_f + \beta _i\,(E[r_m] - r_f)\). Dos acciones tienen distinto retorno esperado **solo** si tienen distinto β: es la única diferencia que el CAPM reconoce.
+
+→ beta · riesgo_sistemático (C1) · alpha_de_jensen · fama_french
+
+<details><summary>más</summary>
+
+Tres retornos en juego: \(r_i\) (una acción), \(r_m\) (el mercado, ej. S&P 500) y \(r_f\) (el
+piso sin riesgo, ej. T-bill a 3 meses). \(E[r_m] - r_f\) es la prima que pide el mercado por
+arriesgar. Graficada con β en el eje horizontal, la ecuación **es una recta**: la SML. Como no
+se observa \(E[r_i]\), en la práctica se corre OLS de retornos *realizados* en exceso:
+\(r_i - r_f = \alpha + \beta (r_m - r_f) + \varepsilon\) — "en exceso" de los dos lados.
+Ej.: \(r_f = 5\%\), \(E[r_m] = 10\%\), \(\beta = 1.4\) ⇒ \(E[r_i] = 5\% + 1.4\cdot 5\% = 12\%\); con
+\(\beta = 0.5\) sería 7.5% — una acción más tranquila exige menos retorno.
+
+</details>
+
+### β: qué mide y de dónde sale  [C4 §2]
+\(\beta _i = \mathrm{Cov}(r_i, r_m)/\mathrm{Var}(r_m)\): cuánto se mueve *esta* acción cuando se mueve el mercado. No es arbitraria: es la **solución de mínimos cuadrados** de \(r_i \approx \alpha + \beta r_m\).
+
+→ CAPM · riesgo_sistemático_vs_idiosincrático · beta_se_mueve · riesgo_sistemático (C1)
+
+<details><summary>más</summary>
+
+Derivar el error cuadrático e igualar a 0 devuelve exactamente Cov/Var. \(\beta = 1\) se mueve
+como el mercado; \(\beta = 2\): mercado +1% ⇒ activo ≈ +2%; \(\beta = 0.5\): ≈ +0.5%;
+\(\beta \le 0\): nulo o inverso. Es la versión estimada del beta que en C1 era solo una
+definición.
+Ej.: en el S&P 2020-2024 Nvidia tiene \(\beta \approx 1.8\), Apple/Microsoft ≈ 1.2, J&J ≈ 0.5.
+
+</details>
+
+### Riesgo sistemático vs. idiosincrático  [C4 §2]
+\(\sigma _i^2 = \beta _i^2\,\sigma _m^2 + \sigma ^2(\varepsilon _i)\). El primero lo comparten todas las acciones y **no se diversifica**; el segundo es propio de la empresa y **se cancela en promedio** en una cartera.
+
+→ beta · riesgo_sistemático (C1) · portfolios (C5) · sharpe
+
+<details><summary>más</summary>
+
+Por eso el mercado solo paga por el riesgo sistemático: el idiosincrático (un juicio, un mal
+balance) se puede eliminar gratis diversificando, así que nadie te compensa por cargarlo. Esta
+descomposición es lo que C5 va a usar para armar carteras.
+Ej.: una cartera de 30 acciones de distintos sectores tiene casi solo \(\beta ^2\sigma _m^2\); la
+parte \(\sigma ^2(\varepsilon )\) de cada una se diluye.
+
+</details>
+
+### Alpha de Jensen y Sharpe  [C4 §2]
+**α** = el intercepto de la regresión: el retorno que sobra por encima de lo que el β explica. **Sharpe** \(= (r - r_f)/\sigma\): retorno extra por unidad de riesgo *total*.
+
+→ CAPM · SML · zoologico_de_factores · portfolios (C5)
+
+<details><summary>más</summary>
+
+En la SML: punto *sobre* la recta, el CAPM predijo bien (\(\alpha \approx 0\)); *arriba*, rindió más
+de lo que le tocaba por su riesgo (\(\alpha > 0\), generó valor de verdad); *abajo*, perdió valor
+pese al riesgo tomado. Alpha responde "¿le ganaste al mercado o solo tomaste más riesgo?".
+Sharpe es la métrica más usada de la industria; el S&P histórico da ≈ 0.45.
+Ej.: un fondo rindió 15% en un año en que, según su β, le tocaba 12% ⇒ \(\alpha = +3\%\). En la
+slide: Nvidia con \(\alpha \approx +50\%\) anual, J&J y Coca-Cola bajo la recta.
+
+</details>
+
+### β no existe sin decir cómo se mide  [C4 §2]
+Ventana (¿1, 2, 5 años?), frecuencia (¿diaria, semanal, mensual?) y un **error estándar**: con 252 días \(SE(\hat\beta ) \approx \pm 0.1\)–0.2, así que "β = 1.3" significa "β ∈ [1.1, 1.5]".
+
+→ beta · practica_C4 (Ej. 1) · lopez_de_prado (C6)
+
+<details><summary>más</summary>
+
+No hay respuesta única, y encima se mueve: el β rolling cambia con el ciclo, el β de crisis no
+es el β de calma. β sin barras de error es mala práctica — el notebook lo grafica así a
+propósito.
+Ej.: reportar β = 1.3 con ±0.2 y β = 1.1 con ±0.2 como "distintos" es leer ruido.
+
+</details>
+
+## §3 Fama-French y el zoológico de factores
+
+### Qué es un factor  [C4 §3]
+Un **patrón compartido por un grupo** de acciones, no una acción puntual. Se arma como **estrategia comprable**: comprar un grupo, vender otro (long-short).
+
+→ fama_french_3 · momentum · nelson_siegel (C1) ⚡ · PCA_curva
+
+<details><summary>más</summary>
+
+"Las chicas" o "las baratas" se mueven parecido entre sí más allá del mercado general. Que
+un factor sea una cartera long-short es lo que lo vuelve medible: tiene un retorno diario y
+se le puede correr una regresión.
+Ej.: en el notebook, SMB ≈ IWM − SPY (chicas menos grandes) y HML ≈ IVE − IVW (value menos
+growth), con ETFs líquidos en vez de la data library académica.
+
+</details>
+
+### Fama-French 3 factores  [C4 §3]
+\(r_i - r_f = \alpha _i + \beta _i\,MKT + s_i\,SMB + h_i\,HML + \varepsilon _i\). **MKT** el mercado, **SMB** premio al tamaño (chicas − grandes), **HML** premio al valor (baratas − caras).
+
+→ CAPM · que_es_un_factor · momentum · ridge_lasso (§7) · practica_C4 (Ej. 1)
+
+<details><summary>más</summary>
+
+Es el CAPM con dos regresores más, y la pregunta empírica es cuánto sube el R² y cuánto se
+achican los α al agregarlos: si los factores nuevos explican lo que el mercado solo no
+explicaba, el α "misterioso" de CAPM se convierte en exposición a tamaño o valor. Datos: Ken
+French (Dartmouth), desde 1926. En la ventana 2014-2024 de la slide, SMB y HML caen
+sostenidamente (el premio se revierte) y MKT domina en Sharpe; la baja correlación entre
+factores es lo que justifica cada adición.
+Ej.: misma idea que Nelson-Siegel en C1 — resumir muchas series en pocos factores — pero acá
+los factores son carteras, no parámetros. ⚡
+
+</details>
+
+### Momentum y Fama-French 5  [C4 §3]
+**Momentum** (Carhart 1997): lo que subió el último año sigue subiendo un poco más. **FF5** (2015) agrega **RMW** (rentables − no rentables) y **CMA** (invierten poco − mucho).
+
+→ fama_french_3 · zoologico_de_factores
+
+<details><summary>más</summary>
+
+Momentum es lo contrario de lo que uno esperaría intuitivamente, y es el cuarto factor
+clásico: comprar ganadores, vender perdedores. Premio histórico grande (~5%/año) pero con
+crashes brutales (2009: −80% en meses). Con los 5 de FF5 juntos, HML deja de aportar
+información nueva: queda explicado por los otros.
+Ej.: MOM fue el más estable de los cuatro en 2014-2024 mientras SMB y HML perdían.
+
+</details>
+
+### El zoológico de factores  [C4 §3]
+La academia publicó **cientos** de factores. No puede haber 400 fuentes distintas de riesgo: es **multiple testing + p-hacking**.
+
+→ fama_french_3 · lasso (§7) · lopez_de_prado (C6) · practica_C4 (Ej. 4)
+
+<details><summary>más</summary>
+
+Si probás 400 señales al azar, ~20 van a "funcionar" solo por casualidad, y solo se publican
+las que funcionaron: los otros 380 intentos fallidos nadie los ve. Consecuencia medida:
+la mitad de los factores publicados se evapora al probarlos con datos nuevos, y los que
+sobreviven pierden ~50% del premio post-publicación (McLean-Pontiff 2016) — el mercado
+aprende y el arbitraje se lo come. Lasso (§7) es la respuesta mecánica a "¿qué factores
+sobreviven?"; C6 trae la caja de herramientas completa.
+Ej.: el notebook parte HML en enero de 1993 (cuando Fama-French lo publicaron) y compara el
+Sharpe pre y post, aislando además la "década perdida" 2010-2020.
+
+</details>
+
+## §4 Series temporales: ARIMA
+
+### Estacionariedad  [C4 §4]
+Una serie es estacionaria si su comportamiento promedio **no cambia con el tiempo**: media, dispersión y relación pasado-presente estables. Sin eso no hay estimación posible.
+
+→ ADF_KPSS · ARIMA · retorno_logaritmico · GBM (C2)
+
+<details><summary>más</summary>
+
+Sin estacionariedad cada momento del tiempo sería una muestra de un solo dato. El diagnóstico
+financiero básico: los **precios no** son estacionarios (caminan sin límite, es el GBM de C2),
+los **retornos aproximadamente sí**. Por eso se modela \(r_t\), nunca \(P_t\).
+Ej.: diferenciar una vez (\(d = 1\)) convierte precios en retornos, y ahí recién se puede
+estimar algo.
+
+</details>
+
+### Tests ADF y KPSS  [C4 §4]
+Tienen la **nula invertida** (ADF: \(H_0\) = raíz unitaria; KPSS: \(H_0\) = estacionaria), por eso se corren **juntos, nunca solos**.
+
+→ estacionariedad · ARIMA · pair_trading (Unidad 2)
+
+<details><summary>más</summary>
+
+Si coinciden, confío: ADF rechaza + KPSS no rechaza ⇒ estacionaria; ADF no rechaza + KPSS
+rechaza ⇒ no estacionaria. Si discrepan es **zona gris**: series en el límite, con reversión
+muy lenta, casi caminata aleatoria — ahí ningún test alcanza solo.
+Ej.: ruido blanco (\(\varphi = 0\)) y caminata aleatoria (\(\varphi = 1\)) son los casos fáciles y los
+tests acuerdan; un AR(1) con \(\varphi = 0.97\) es genuinamente estacionario pero *casi* no lo es,
+y los dos tests discrepan.
+
+</details>
+
+### AR, MA y ARIMA(p,d,q)  [C4 §4]
+**AR(p)**: \(r_t = \mu + \varphi _1 r_{t-1} + \cdots + \varphi _p r_{t-p} + \varepsilon _t\) (memoria de p valores). **MA(q)**: \(r_t = \mu + \varepsilon _t + \theta _1\varepsilon _{t-1} + \cdots + \theta _q\varepsilon _{t-q}\) (memoria de q shocks). **d** = veces que hay que diferenciar.
+
+→ vasicek_CIR (C3) ⚡ · ACF_PACF · AIC_BIC · ljung_box · box_jenkins
+
+<details><summary>más</summary>
+
+El AR(1) ya se usó: es la discretización del Vasicek de C3 — \(dr = \kappa (\theta - r)dt + \sigma dW\)
+en pasos discretos es \(r_t = c + \varphi r_{t-1} + \varepsilon _t\) con \(\varphi = 1 - \kappa \Delta t\). ⚡
+Para precios \(d = 1\). La receta de **Box-Jenkins**: 1. ADF para \(d\) → 2. ACF/PACF para \(p, q\) →
+3. máxima verosimilitud → 4. residuos = ruido blanco (Ljung-Box). Es *el* algoritmo de la
+econometría clásica, y funciona muy bien… donde hay señal.
+Ej.: "el presente depende de p valores pasados" (AR) vs. "de q sorpresas pasadas" (MA): dos
+formas de memoria, y ARMA las combina.
+
+</details>
+
+### ACF y PACF: cómo se leen  [C4 §4]
+**ACF**(k): correlación de la serie consigo misma corrida k días. **PACF**(k): lo mismo, **descontando el efecto de los días intermedios**.
+
+→ AR_MA_ARIMA · autocorrelacion_depende · ljung_box
+
+<details><summary>más</summary>
+
+Si hoy se parece a hace 2 días *solo porque* ambos se parecen a hace 1 día, la PACF en el
+rezago 2 lo filtra y da ~0: ACF mezcla el efecto directo con el indirecto, PACF aísla solo el
+directo. Sirven juntas porque cada una delata un modelo distinto: en un **AR(p)** la ACF decae
+de a poco y la PACF se corta de golpe en p; en un **MA(q)** es al revés. La barra del rezago 0
+siempre da 1 y no es evidencia de nada.
+Ej.: ACF/PACF de retornos del SPY 2010-2025: desde el rezago 1 todas las barras caen dentro
+de la banda — la firma del ruido blanco, la primera pista de que no hay memoria explotable.
+
+</details>
+
+### AIC y BIC: elegir el orden sin sobreajustar  [C4 §4]
+\(AIC = 2k - 2\ln\hat L\), \(BIC = k\ln n - 2\ln\hat L\). Premian el ajuste (\(\hat L\)) y **penalizan** la cantidad de parámetros (\(k\)). Se elige el más bajo.
+
+→ AR_MA_ARIMA · ridge_lasso (§7) · lopez_de_prado (C6)
+
+<details><summary>más</summary>
+
+El problema: más parámetros *siempre* ajustan el pasado igual o mejor. Un AR(5) nunca explica
+peor los datos ya vistos que un AR(1); si el criterio fuera "mejor ajuste" siempre ganaría el
+más complejo — el sobreajuste de siempre. BIC penaliza más fuerte con muchos datos
+(\(\ln n\) crece, el 2 de AIC no) y tiende a elegir modelos más simples. Es la misma tensión
+que Ridge/Lasso resuelven con λ en §7.
+Ej.: agregar un parámetro que casi no mejora \(\hat L\) empeora el AIC/BIC.
+
+</details>
+
+### Ljung-Box: ¿el modelo dejó algo sin explicar?  [C4 §4]
+Residuo = dato real − predicción. Si el modelo es bueno, los residuos son **ruido puro**. Ljung-Box testea varios rezagos a la vez: \(H_0\) = sin estructura remanente.
+
+→ ACF_PACF · AR_MA_ARIMA · autocorrelacion_depende
+
+<details><summary>más</summary>
+
+Si **rechaza**: sobró estructura, el modelo está incompleto, hay que agrandarlo. Si **no
+rechaza**: los residuos son indistinguibles de ruido, no hay más para exprimir con un modelo
+lineal. Mira varios rezagos porque un modelo puede parecer bien en uno y fallar en otro.
+Ej.: un AR(2) simulado y ajustado como AR(1): queda estructura en el rezago 2, Ljung-Box
+rechaza; ajustado como AR(2), no rechaza en ningún rezago.
+
+</details>
+
+### ¿Queremos autocorrelación? Depende de qué serie  [C4 §4]
+En los **retornos** \(r_t\): casi no hay (sería plata gratis). En la **volatilidad** \(r_t^2\): enorme, y es la base de GARCH. En los **residuos** de un modelo ajustado: no debe quedar.
+
+→ ACF_PACF · por_que_ARIMA_falla · GARCH · ljung_box
+
+<details><summary>más</summary>
+
+No es que la "querramos" o no: es lo que hay. Si \(r_t\) tuviera autocorrelación fuerte,
+predecir mañana con el dato de hoy sería gratis y alguien ya lo estaría haciendo. Si \(r_t^2\) no
+la tuviera, no habría nada que modelar en §5.
+Ej.: en el SPY, ACF de \(r_t\) ≈ nada; ACF de \(r_t^2\) enorme y persistente por 30 rezagos — el
+efecto ARCH a simple vista.
+
+</details>
+
+### Por qué ARIMA no predice retornos  [C4 §4]
+ARIMA sobre retornos del SPY: pronóstico ≈ la media ≈ 0, **indistinguible del naive**. La eficiencia del mercado es un **punto fijo**: si \(r_t\) fuera predecible, alguien lo explotaría y al hacerlo borraría el patrón.
+
+→ autocorrelacion_depende · GARCH · pair_trading (Unidad 2) · practica_C4 (Ej. 2)
+
+<details><summary>más</summary>
+
+La predictibilidad lineal se auto-destruye; lo que queda son autocorrelaciones de ~0.01,
+señal/ruido ínfimo e inestable. El pronóstico es una recta porque \(\varphi \approx -0.03\) y no
+significativo: \(\hat r_{t+h} = \mu + \varphi ^h(r_t - \mu )\) converge a μ en 1-2 días, no hay
+memoria que estirar. **La lección correcta no es "nada se puede predecir"**: el primer momento
+(retornos) casi imposible a corto plazo; el segundo (volatilidad) muy predecible. Donde ARIMA
+sí sirve en finanzas: spreads (pair trading, C7), volumen, series macro — donde hay estructura.
+Ej.: el fracaso es el resultado, y es información. Otra forma de verlo: la serie es señal +
+ruido y ARMA es un filtro que intenta separarlos — Feng & Palomar (2016) mostraron que es
+matemáticamente lo mismo que sacarle la estática a una radio.
+
+</details>
+
+## §5 GARCH y el VaR condicional
+
+### ARCH y GARCH: la varianza condicional  [C4 §5]
+\(r_t = \mu + \varepsilon _t\), \(\varepsilon _t = \sigma _t z_t\). **ARCH(1)** (Engle): \(\sigma _t^2 = \omega + \alpha \varepsilon _{t-1}^2\). **GARCH(1,1)** (Bollerslev): \(\sigma _t^2 = \omega + \alpha \varepsilon _{t-1}^2 + \beta \sigma _{t-1}^2\).
+
+→ heston (C3) ⚡ · autocorrelacion_depende · varianza_largo_plazo · leverage_GJR · VaR_condicional
+
+<details><summary>más</summary>
+
+"Condicional" = la varianza de *hoy* dado lo que pasó hasta ayer, no un promedio fijo de todos
+los años. Cada símbolo: **ω** el piso (garantiza que \(\sigma _t^2\) no colapse a cero);
+**\(\varepsilon _{t-1}^2\)** el shock de ayer al cuadrado; **α** la reactividad (cuánto pesa la
+sorpresa de ayer); **\(\sigma _{t-1}^2\)** lo que el modelo mismo había predicho para ayer;
+**β** la persistencia. Es el hecho estilizado #1 de C1 ("la calma y la tormenta se agrupan")
+convertido en ecuación, y es Heston en tiempo discreto: la varianza con dinámica propia. ⚡
+Ej.: el notebook lo estima **a mano** por máxima verosimilitud:
+\(\ln L = -\tfrac{1}{2}\sum _t[\ln(2\pi \sigma _t^2) + \varepsilon _t^2/\sigma _t^2]\), diez líneas.
+
+</details>
+
+### Varianza de largo plazo y colas gordas  [C4 §5]
+\(\bar\sigma ^2 = \omega /(1 - \alpha - \beta )\): el nivel "normal" al que la vol siempre vuelve, a velocidad que depende de \(\alpha + \beta\). Mezclar campanas de distinto ancho **fabrica curtosis** sin supuestos raros.
+
+→ GARCH · heston (C3) · merton_jumps (C3) · VaR_condicional
+
+<details><summary>más</summary>
+
+Después de un shock grande el pronóstico baja de a poco hacia \(\bar\sigma ^2\); si \(\alpha + \beta\)
+está cerca de 1 los shocks duran mucho, cerca de 0 se olvidan al día siguiente. Esto es
+justo lo que ARIMA no pudo con el retorno: la varianza *sí* tiene estructura predecible.
+Y de yapa: cada día el shock es una normal común, pero su ancho \(\sigma _t\) cambia; mezclar
+muchos días con anchos distintos da colas más gordas que una sola campana fija — el hecho
+estilizado #2 de C1, ahora explicado. Mismo mecanismo que \(\xi > 0\) en Heston.
+Ej.: en el SPY, GARCH(1,1) típicamente da \(\alpha + \beta \approx 0.98\): la tormenta de marzo 2020
+tardó meses en volver al nivel normal.
+
+</details>
+
+### Leverage effect: GJR-GARCH y EGARCH  [C4 §5]
+GARCH(1,1) es simétrico, pero un retorno **negativo dispara más vol futura** que uno positivo del mismo tamaño. **GJR**: \(\sigma _t^2 = \omega + (\alpha + \gamma \,\mathbb{1}_{\varepsilon _{t-1}<0})\,\varepsilon _{t-1}^2 + \beta \sigma _{t-1}^2\).
+
+→ GARCH · causas_del_skew (C3) ⚡ · heston (C3)
+
+<details><summary>más</summary>
+
+Nombre histórico: leverage effect (Black 1976) — una acción que cae aumenta el apalancamiento
+de la empresa y eso sube su riesgo. Es la misma asimetría que en C3 se fabricaba con \(\rho < 0\)
+en Heston. ⚡ GJR agrega un "interruptor": si el shock de ayer fue negativo pesa \(\alpha + \gamma\)
+en vez de α. **EGARCH** hace lo mismo sobre \(\ln \sigma _t^2\), con asimetría suave en vez de salto.
+La **News Impact Curve** lo grafica: varianza de mañana vs. shock de hoy; GARCH es una parábola
+simétrica, GJR y EGARCH están inclinadas hacia los shocks negativos.
+Ej.: una caída del 5% viene seguida de más nerviosismo que una suba del 5%; el GARCH simétrico
+subestima el riesgo justo después de una caída.
+
+</details>
+
+### VaR y Expected Shortfall  [C4 §5]
+**VaR**(confianza, horizonte): la pérdida máxima esperable. **ES**: cuánto se pierde *en promedio* una vez que ya se entró en la cola. VaR dice **dónde** empieza la cola; ES dice **cuánto** duele.
+
+→ VaR_condicional · GARCH · portfolios (C5) · densidad_implícita (C2)
+
+<details><summary>más</summary>
+
+Por eso Basilea III exige ES, no solo VaR, para el capital de los bancos: dos carteras con el
+mismo VaR pueden tener colas completamente distintas más allá del umbral.
+Ej.: VaR(99%, 1 día) = USD 1M significa "hay 1% de probabilidad de perder más de 1M mañana";
+el ES dice cuánto se pierde en promedio en ese 1% de días.
+
+</details>
+
+### VaR condicional  [C4 §5]
+\(VaR_t(99\%) = \mu - 2.33\,\sigma _t\), con la \(\sigma _t\) de GARCH que **cambia día a día**. El límite de riesgo se agranda solo cuando la tormenta empieza.
+
+→ VaR_ES · GARCH · practica_C4 (Ej. 2) · portfolios (C5)
+
+<details><summary>más</summary>
+
+Una σ fija supone que marzo 2020 y un agosto tranquilo tienen el mismo riesgo. El VaR
+estático usa una sola ventana histórica y tarda en "enterarse" de un shock; el condicional se
+recalcula cada día y se anticipa. Lo que falla igual en los dos: la *cantidad* total de
+excedencias, porque las colas reales son más gordas que la normal (el 2.33 es gaussiano). Se
+backtestea contando excedencias y, para el regulador, chequeando que no vengan agrupadas
+(test de Christoffersen): la independencia importa tanto como la cantidad.
+Ej.: el notebook compara VaR estático vs. condicional en el SPY con 2020 como prueba de fuego.
+
+</details>
+
+## §6 PCA de la curva
+
+### PCA: diagonalizar la matriz de covarianza  [C4 §6]
+Pregunta: ¿qué dirección \(v\) captura la **mayor varianza** al proyectar los datos? \(\max _v v^\top \Sigma v\) s.a. \(\|v\| = 1\) ⇒ (Lagrange) \(\Sigma v = \lambda v\).
+
+→ nivel_pendiente_curvatura · fama_french_3 · nelson_siegel (C1) ⚡
+
+<details><summary>más</summary>
+
+Cada componente principal **es** un autovector de Σ y su autovalor λ **es** la varianza que
+explica (% de la comp. \(i\) = \(\lambda _i/\sum \lambda _j\)). Las siguientes maximizan lo mismo
+restringidas a ser ortogonales a las anteriores — por eso los patrones no se pisan. Mismo
+espíritu que Fama-French: comprimir muchos números correlacionados en pocos factores, pero acá
+los factores los elige la matriz, no el modelador.
+Ej.: la curva de tasas tiene ~11 plazos que casi nunca se mueven de forma independiente;
+Σ de los cambios diarios de los N tenores es el objeto de partida.
+
+</details>
+
+### Nivel, pendiente y curvatura  [C4 §6]
+Tres componentes explican **más del 95%** de cómo se mueve *toda* la curva. **Nivel** (~90%): todo sube o baja por igual. **Pendiente** (~6%): corto y largo en direcciones opuestas. **Curvatura** (~3%): la panza relativa a los extremos.
+
+→ PCA · nelson_siegel (C1) ⚡ · duration_DV01 (C1) · curva_de_rendimiento (C1) · hull_white (C3)
+
+<details><summary>más</summary>
+
+Las cargas de cada PC tienen forma reconocible: PC1 plana (todos los tenores con el mismo
+signo), PC2 monótona de + a −, PC3 en U. Son exactamente los tres factores que Nelson-Siegel
+*imponía* paramétricamente en C1; PCA los *descubre* desde los datos. ⚡ El nivel domina porque
+política monetaria e inflación esperada mueven todos los plazos a la vez — y es el "shock
+paralelo de 1bp" que el DV01 de C1 mide.
+Ej.: un desk de tasas cubre el nivel con DV01 y después se preocupa por pendiente y curvatura,
+en ese orden, porque en ese orden está el riesgo.
+
+</details>
+
+## §7 Ridge y Lasso: regularizar o sobreajustar
+
+### El problema: más variables candidatas que datos  [C4 §7]
+Con muchos factores candidatos (§3) y pocos años de datos, **OLS inventa**: coeficientes gigantes, signos sin sentido, ajusta perfecto el pasado y falla fuera de muestra.
+
+→ zoologico_de_factores · ridge_lasso · AIC_BIC · lopez_de_prado (C6)
+
+<details><summary>más</summary>
+
+Es el sobreajuste de §4 en versión multivariada: más regresores nunca ajustan peor el pasado.
+La solución tiene la misma forma que AIC/BIC — premiar el ajuste y penalizar la complejidad —
+pero ahora la penalización entra en la función de pérdida y se elige por validación cruzada.
+Ej.: el notebook explica una acción con 8 factores reales (ETFs) + 5 factores de ruido puro
+"que publicó un paper", y todo se juzga en el 20% final de la muestra.
+
+</details>
+
+### Ridge (L2) vs. Lasso (L1)  [C4 §7]
+**Ridge**: \(\min _\beta \|r - F\beta \|^2 + \lambda \|\beta \|_2^2\), encoge *todo* hacia cero, nada llega exacto. **Lasso**: \(\min _\beta \|r - F\beta \|^2 + \lambda \|\beta \|_1\), **puede llevar coeficientes exactamente a cero**: selección automática.
+
+→ el_problema_regularizacion · zoologico_de_factores · puente_al_ML · practica_C4 (Ej. 3)
+
+<details><summary>más</summary>
+
+La geometría explica la diferencia: las curvas de nivel del error son elipses centradas en el
+OLS; la región permitida por la penalización es un **círculo** (L2) o un **rombo** (L1). El
+punto donde la elipse toca el círculo cae en cualquier lugar del borde (las dos coordenadas
+distintas de cero); con el rombo, por las puntas, suele caer justo en una **esquina**, sobre
+un eje — y ahí una coordenada es exactamente 0. Lasso responde la pregunta del zoológico:
+¿qué factores sobreviven? En el path de regularización, Ridge encoge todo suavemente; Lasso
+anula los factores de ruido primero. El R² out-of-sample del óptimo empata con OLS sin perder
+generalización, y un λ demasiado grande sí cuesta caro.
+Ej.: con 4 factores verdaderos + 6 de ruido, Lasso deja los 6 de ruido en cero exacto.
+
+</details>
+
+### El puente al ML (y la advertencia para C6)  [C4 §7]
+Ridge y Lasso **ya son machine learning**: función de pérdida + regularización + validación cruzada es el esqueleto de todo el ML supervisado. Pero la **validación cruzada estándar miente** con datos financieros.
+
+→ ridge_lasso · lopez_de_prado (C6) · beta_se_mueve
+
+<details><summary>más</summary>
+
+Lo no lineal (árboles, redes) extiende la misma lógica. El problema: K-fold mezcla el tiempo
+y puede terminar entrenando con el futuro para predecir el pasado. Hoy se plantea el
+problema; C6 (López de Prado) trae la caja de herramientas para resolverlo (purged CV,
+embargo). Por eso el notebook divide train/test **en orden temporal, sin barajar**.
+Ej.: un modelo que "predice" 2019 habiendo entrenado con 2020 da un R² excelente y no sirve
+para nada.
+
+</details>
+
+## Práctica de C4 (notebook `clase4_practica_alumnos.ipynb`)
+
+Cuatro ejercicios, cada uno con predicción escrita *antes* de correr:
+
+- **Ej. 1 — CAPM y Fama-French con ETFs.** α, β, SE(β) y R² de 6 acciones (AAPL, NVDA, JPM,
+  XOM, KO, F) contra SPY; después FF3 con SMB ≈ IWM − SPY y HML ≈ IVE − IVW. ¿Cuánto sube el R²
+  y cuánto se achican los α? → CAPM · beta_se_mueve · fama_french_3
+- **Ej. 2 — ARIMA fracasa, GARCH funciona.** SPY 10 años: ADF, las dos ACF, mejor ARIMA por AIC
+  vs. naive out-of-sample; GARCH(1,1) por máxima verosimilitud *a mano*; VaR condicional vs.
+  estático con backtest de excedencias. → por_que_ARIMA_falla · GARCH · VaR_condicional
+- **Ej. 3 — Lasso vs. Ridge en vivo.** 8 factores reales (ETFs) + 5 de ruido inyectado; split
+  temporal 80/20 sin barajar; ¿Lasso pone los 5 fantasmas en cero exacto? → ridge_lasso
+- **Ej. 4 (extra) — El factor que muere al publicarse.** HML mensual desde 1926 (Ken French),
+  partido en enero 1993; Sharpe pre vs. post, y la década perdida 2010-2020 aparte.
+  → zoologico_de_factores
+
+## ❓ Dudas de C4
+
+*(Por completar después de repasar la clase.)*
+
+---
 
 # C5 — Portfolios
 
 ## Idea general
 
 ⬜ Por completar al cursar. Hipótesis: cómo combinar activos para que el riesgo total sea
-menor que la suma de los riesgos (diversificación), y cómo medir ese riesgo (VaR, Expected
-Shortfall, Basel III). Conecta con C1 (duration/DV01 como riesgo de tasa del portfolio),
-C3 (la superficie de vol como input de riesgo) y C4 (exposición a factores).
+menor que la suma de los riesgos (diversificación, Markowitz) y cómo medir el riesgo de la
+cartera entera. Conecta con C1 (duration/DV01 como riesgo de tasa del portfolio), C3 (la
+superficie de vol como input de riesgo) y C4 (la descomposición sistemático/idiosincrático,
+las exposiciones a factores y la \(\sigma _t\) de GARCH como inputs; VaR/ES ya definidos en §5).
 
 # C6 — Machine Learning
 
@@ -1604,8 +2177,10 @@ C3 (la superficie de vol como input de riesgo) y C4 (exposición a factores).
 ⬜ Por completar al cursar. Hipótesis: qué cambia cuando en vez de un modelo con 5
 parámetros interpretables (Heston) usás uno con miles (LSTM, XGBoost, LGBM), y por qué en
 finanzas el overfitting es peor que en otros dominios (poca señal, mucho ruido, series no
-estacionarias — Lopez de Prado). Conecta con C4 (factores como features) y con la Unidad 2
-(pair trading, predicción intradía).
+estacionarias — Lopez de Prado). C4 §7 ya dejó planteado el problema: Ridge/Lasso son ML y
+la validación cruzada K-fold miente con series de tiempo. Conecta con C4 (factores como
+features, el zoológico como multiple testing) y con la Unidad 2 (pair trading, predicción
+intradía).
 
 # C7–C8 — Unidad 3 (HFT / baja latencia)
 
