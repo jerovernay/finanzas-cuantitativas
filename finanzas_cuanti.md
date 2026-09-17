@@ -61,7 +61,7 @@ después. Si no podés resumir la clase en esas tres partes, no la entendiste to
 | C2 | Opciones y Black-Scholes | ✅ armada |
 | C3 | Volatilidad, tasas y crédito | ✅ armada |
 | C4 | Factores y series temporales (del mundo Q al mundo P) | ✅ armada |
-| C5 | Portfolios (Markowitz, riesgo de cartera) | ⬜ pendiente |
+| C5 | Teoría de portafolio: Markowitz, Black-Litterman y Risk Parity | ✅ armada |
 | C6 | Machine Learning | ⬜ pendiente |
 | C7–C8 | Unidad 3 (HFT / baja latencia) | ⬜ pendiente |
 | C9 | Wrap del curso + presentaciones (formato póster) | ⬜ pendiente |
@@ -75,6 +75,11 @@ resume toda la curva en nivel/pendiente/curvatura (C1) → Heston resume la supe
 5 parámetros (C3) → Fama-French resume miles de acciones en 3 factores y PCA *redescubre*
 nivel/pendiente/curvatura desde los datos (C4). Lo que cambia es quién elige los factores:
 el modelador (paramétrico) o los datos (estadístico). ⚡
+
+**Tercer hilo (C4 → C5): encoger hacia algo simple.** Ridge encoge un vector de coeficientes hacia
+cero (C4) → Ledoit-Wolf encoge la matriz Σ entera hacia la identidad, y Black-Litterman encoge μ
+hacia el equilibrio de mercado (C5). Siempre el mismo trade-off sesgo/varianza: un estimador un
+poco sesgado pero estable predice mejor que uno "perfecto" pero ruidoso. ⚡
 
 ---
 
@@ -2158,17 +2163,642 @@ Cuatro ejercicios, cada uno con predicción escrita *antes* de correr:
 
 *(Por completar después de repasar la clase.)*
 
+Esta clase siempre la misma pregunta de fondo, '¿qué NO sé, y con qué herramienta lo estimo?
+
+Ir cambiando de parametros en base a los datos de hoy?
+
+"Condicional" = la varianza de hoy dado lo que pasó hasta ayer, no un promedio fijo de todos los años
+
+
+
 ---
 
-# C5 — Portfolios
+# C5 — Teoría de portafolio: Markowitz, Black-Litterman y Risk Parity
 
 ## Idea general
 
-⬜ Por completar al cursar. Hipótesis: cómo combinar activos para que el riesgo total sea
-menor que la suma de los riesgos (diversificación, Markowitz) y cómo medir el riesgo de la
-cartera entera. Conecta con C1 (duration/DV01 como riesgo de tasa del portfolio), C3 (la
-superficie de vol como input de riesgo) y C4 (la descomposición sistemático/idiosincrático,
-las exposiciones a factores y la \(\sigma _t\) de GARCH como inputs; VaR/ES ya definidos en §5).
+**En una frase.** La matemática de Markowitz es elegante y correcta: dado μ y Σ, el portafolio
+óptimo se resuelve con un Lagrangiano. Lo que falla son los *inputs*: μ no se puede estimar bien
+con los datos que hay, y Σ tiene N² números. Todo lo que viene después de §1 es una secuencia
+de respuestas a la misma pregunta — *¿cómo armo una cartera razonable con inputs que no puedo
+estimar bien?* — y cada respuesta ataca un input distinto o cambia la pregunta.
+
+**Qué problema del mercado resuelve.** Un inversor tiene N activos y capital para repartir. La
+intuición ingenua ("todo al de mayor retorno esperado") ignora que ese retorno es incierto;
+Markowitz (1952) convierte "diversificar es prudente" en un problema de optimización resoluble,
+y la industria global administra billones resolviendo variantes de ese problema. Pero el óptimo
+de papel se ve hermoso in-sample y colapsa afuera de la muestra (Michaud: "optimizadores de
+error"), así que lo que la industria usa de verdad son las correcciones: shrinkage de Σ
+(Ledoit-Wolf), Black-Litterman (fondos, bancos centrales, fondos soberanos: una cartera que un
+humano puede *explicar*), y risk parity / HRP (Bridgewater, All Weather: repartir riesgo, no
+capital, sin opinar sobre μ).
+
+**Cómo conecta.** Hacia atrás: el CAPM de C4 era una regresión sobre datos; hoy vuelve como
+**consecuencia matemática del equilibrio** — si todos hacen Markowitz + Tobin, el portafolio
+tangente tiene que ser el mercado, y β mide la contribución de cada acción a su riesgo. Misma
+fórmula, origen opuesto. La curva de diversificación es la descomposición
+sistemático/idiosincrático de C4 vista con N activos; el piso \(\sigma\sqrt{\bar\rho}\) *es* el
+riesgo sistemático. Shrinkage de Σ es Ridge aplicado a una matriz (C4 §7) ⚡, y el prior de
+Black-Litterman es shrinkage de μ hacia el equilibrio. El colapso out-of-sample es el mismo
+sobreajuste de Ridge/Lasso. La \(\sigma _t\) de GARCH (C4) es un input natural para Σ. Hacia
+adelante: walk-forward y look-ahead bias son la versión simple del problema que C6 retoma en
+serio (purged K-fold, embargo); HRP es López de Prado; el Lagrangiano con restricciones vuelve
+en Almgren-Chriss (ejecución óptima, Unidad 2); el market maker de Avellaneda-Stoikov también
+resuelve un problema de inventario/riesgo.
+
+> Arco de la clase — *De la solución de papel a lo que se usa de verdad.*
+> §1 Markowitz: retorno lineal, riesgo cuadrático, frontera, MVP, tangente, CML, Tobin y el
+> CAPM como equilibrio → §2 por qué falla: Michaud, dimensionalidad, colapso out-of-sample,
+> shrinkage → §3 Black-Litterman: prior de equilibrio + views, Bayes → §4 sus límites →
+> §5 Risk parity, risk budgeting, HRP → §6 el backtest honesto: no hay ganador universal.
+
+## §1 Markowitz: retorno, riesgo y frontera
+
+### Qué problema resuelve Markowitz  [C5 §1]
+N activos, capital para repartir, retornos **inciertos**. Markowitz (1952) formaliza "diversificar es prudente" como un problema de optimización: elegir pesos \(w\) que minimicen el riesgo para un retorno dado. Nobel 1990 (con Sharpe y Miller).
+
+→ retorno_de_portafolio · riesgo_de_portafolio · frontera_eficiente · de_valuar_a_estimar (C4)
+
+<details><summary>más</summary>
+
+La pregunta que responde es "¿por qué los inversores diversifican, si *deberían* poner todo en
+el activo de mayor valor esperado?". Respuesta: porque el valor esperado no es lo único que
+importa — la dispersión también, y combinar activos la baja. Es el punto de partida de toda la
+teoría de portafolio moderna. No se resuelve una vez: los pesos reales se alejan de los objetivo
+a medida que los activos rinden distinto, y hay que **rebalancear**.
+Ej.: un "60/40" (60% acciones, 40% bonos — el benchmark clásico de riesgo moderado) dejado
+quieto 15 años con acciones al 9% y bonos al 3% termina en 78/22: la cartera se volvió más
+arriesgada sin que nadie lo decidiera. Rebalanceando una vez por año vuelve exacto al 60%.
+
+</details>
+
+### Retorno de un portafolio  [C5 §1]
+\(r_p = w_1 r_1 + \dots + w_N r_N = w^\top r\), y por linealidad de la esperanza \(\mu _p = w^\top\mu\). Es un **promedio ponderado**: la correlación entre activos no juega ningún rol.
+
+→ markowitz · riesgo_de_portafolio · retorno_simple_vs_log (C4)
+
+<details><summary>más</summary>
+
+\(E[\text{suma}] = \text{suma de } E[\cdot]\), sin condiciones. Funciona igual con posiciones
+cortas (algún \(w_i < 0\)): la fórmula no cambia. Por eso el retorno esperado es la parte
+"aburrida" del problema — toda la sorpresa está en el riesgo.
+Ej.: 60% en acciones (\(\mu = 10\%\)) y 40% en bonos (\(\mu = 4\%\)):
+\(\mu _p = 0.6\cdot 10\% + 0.4\cdot 4\% = 7.6\%\).
+
+</details>
+
+### Riesgo de un portafolio: acá está la sorpresa  [C5 §1]
+\(\sigma _p^2 = w^\top\Sigma w = \sum _i w_i^2\sigma _i^2 + \sum _{i\ne j} w_i w_j\sigma _{ij}\). **No** es un promedio ponderado de los \(\sigma _i\): depende de la matriz de covarianza completa.
+
+→ retorno_de_portafolio · diversificacion · maldicion_de_la_dimensionalidad · PCA (C4)
+
+<details><summary>más</summary>
+
+Con 2 activos, escrito a mano: \(\sigma _p^2 = w_1^2\sigma _1^2 + w_2^2\sigma _2^2 + 2w_1w_2\rho _{12}\sigma _1\sigma _2\).
+Los dos primeros términos son "lo esperado" (cada activo aporta su riesgo, ponderado al
+cuadrado); el tercero es un término **cruzado** que depende de cómo covarían — no existe en el
+caso del retorno. Con 3 activos: 3 propios + 3 cruzados. Con N: N propios + \(N(N-1)/2\)
+cruzados, uno por cada *par*. Los cruzados crecen mucho más rápido que los propios, y eso es
+a la vez la fuente de la diversificación (§1) y de la maldición de la dimensionalidad (§2).
+Ej.: con 10 activos ya hay 45 covarianzas a estimar; con 3, \(\sigma _p^2 = w_1^2\sigma _1^2 + w_2^2\sigma _2^2 + w_3^2\sigma _3^2 + 2w_1w_2\sigma _{12} + 2w_1w_3\sigma _{13} + 2w_2w_3\sigma _{23}\).
+
+</details>
+
+### Diversificación y el piso \(\sigma\sqrt{\bar\rho}\)  [C5 §1]
+Un portafolio equi-ponderado de N activos con la misma σ y correlación promedio \(\bar\rho\) tiene \(\sigma _p^2 = \sigma ^2\left[\tfrac{1}{N} + \tfrac{N-1}{N}\bar\rho\right] \to \sigma ^2\bar\rho\). El riesgo **converge a un piso, no a cero**: lo que sobra es el riesgo sistemático.
+
+→ riesgo_de_portafolio · riesgo_sistematico_vs_idiosincratico (C4) ⚡ · beta (C4)
+
+<details><summary>más</summary>
+
+La parte \(1/N\) es el riesgo idiosincrático y se diluye; la parte \(\bar\rho\) es lo que todos
+comparten y no se va con más activos. Cuanto más baja la correlación promedio, más bajo el piso;
+con \(\bar\rho = 0\) el riesgo desaparece en el límite teórico. La ganancia de diversificar no es
+todo-o-nada: la mayor parte ya se consigue con ρ moderadamente bajo, no hace falta llegar a
+negativo (nadie encuentra \(\rho = -1\) entre activos de riesgo reales).
+Ej.: \(\sigma _i = 30\%\), \(\bar\rho = 0.3\): N=1 → 30%, N=5 → 19.9%, N=20 → 17.4%, N=50 →
+16.8%, límite \(0.3\sqrt{0.3} = 16.4\%\). Dos activos con σ=20% cada uno, 50/50: ρ=+1 → 20% (nada
+ganado), ρ=0 → 14% (bajó gratis), ρ=−1 → 0% (el riesgo desaparece).
+
+</details>
+
+### Frontera eficiente  [C5 §1]
+Cada vector de pesos da un punto \((\sigma _p, \mu _p)\). La frontera es el **borde superior** de esa nube: para cada nivel de riesgo, el máximo retorno posible. Todo lo que no está en la frontera está *dominado*.
+
+→ MVP · portafolio_tangente · lagrangiano_de_markowitz · sharpe (C4)
+
+<details><summary>más</summary>
+
+Se obtiene resolviendo, para cada retorno objetivo \(\mu _p\):
+\[\mathcal L(w,\lambda _1,\lambda _2) = \tfrac12 w^\top\Sigma w - \lambda _1(w^\top\mu - \mu _p) - \lambda _2(w^\top\mathbf 1 - 1),\]
+y la solución cerrada da una hipérbola en el plano \((\sigma, \mu)\):
+\(\sigma _p = \sqrt{(C\mu _p^2 - 2A\mu _p + B)/D}\) con \(A, B, C, D\) escalares que dependen de
+\(\Sigma ^{-1}\), μ y \(\mathbf 1\). La composición óptima cambia *continuamente* a lo largo de la
+curva: al pedir más retorno, la cartera se desliza suavemente de "mayoría bonos" a "mayoría
+acciones", no en dos saltos.
+Ej.: en la slide, miles de portafolios aleatorios de 5 activos (acciones USA/EM, bonos,
+commodities, REIT) coloreados por Sharpe; la curva naranja de arriba es la frontera y ningún
+punto queda por encima.
+
+</details>
+
+### Cartera de mínima varianza (MVP)  [C5 §1]
+El punto más a la izquierda de la frontera: menor riesgo posible sin importar el retorno. \(w_{MVP} = \dfrac{\Sigma ^{-1}\mathbf 1}{\mathbf 1^\top\Sigma ^{-1}\mathbf 1}\). **No usa ninguna estimación de μ** — solo Σ.
+
+→ frontera_eficiente · portafolio_tangente · MVP_vs_tangente · shrinkage_ledoit_wolf
+
+<details><summary>más</summary>
+
+Problema: \(\min _w \tfrac12 w^\top\Sigma w\) sujeto a \(w^\top\mathbf 1 = 1\) (una sola
+restricción, sin retorno objetivo). Lagrangiano, derivar e igualar a cero:
+\(\partial _w L = \Sigma w - \lambda\mathbf 1 = 0 \Rightarrow w = \lambda\Sigma ^{-1}\mathbf 1\);
+sustituir en la restricción despeja λ y da la fórmula. Por "solo necesita Σ", muchos gestores
+institucionales lo usan como base por defecto cuando desconfían de sus propios pronósticos de
+retorno — la idea vuelve en §5 (risk parity tampoco usa μ).
+Ej.: con 2 activos, \(\Sigma ^{-1}\mathbf 1 = \frac{1}{\sigma _1^2\sigma _2^2 - \sigma _{12}^2}\begin{pmatrix}\sigma _2^2 - \sigma _{12}\\ \sigma _1^2 - \sigma _{12}\end{pmatrix}\):
+el activo 1 recibe más peso cuanto menor es su propia varianza y más alta la del otro.
+
+</details>
+
+### Portafolio tangente  [C5 §1]
+Con un activo libre de riesgo \(r_f\), la mejor combinación ya no es un punto de la frontera: es mezclar \(r_f\) con **un solo** portafolio riesgoso, el que maximiza el Sharpe \((\mu _p - r_f)/\sigma _p\). \(w^* \propto \Sigma ^{-1}(\mu - r_f\mathbf 1)\).
+
+→ frontera_eficiente · CML · teorema_de_separacion · MVP_vs_tangente · sharpe (C4)
+
+<details><summary>más</summary>
+
+Qué cambia matemáticamente al agregar \(r_f\): es determinístico (varianza cero, no correlaciona
+con nada), así que el portafolio invierte \(w\) en riesgosos y \(1 - w^\top\mathbf 1\) en \(r_f\):
+\(\mu _p = w^\top\mu + (1 - w^\top\mathbf 1)\,r_f\), pero \(\sigma _p^2 = w^\top\Sigma w\) **exactamente
+igual que antes**. El retorno gana un término; el riesgo sigue viniendo 100% de los activos
+riesgosos. Y \(1 - w^\top\mathbf 1\) puede ser negativo: pedir prestado a \(r_f\) para invertir más
+del 100% en riesgosos (apalancamiento), que amplifica retorno esperado y riesgo en la misma
+proporción.
+Ej.: \(w^\top\mathbf 1 = 1.5\) es 150% en riesgosos con el 50% extra prestado a \(r_f\). En la
+práctica hay margin requirements y la tasa de préstamo no es exactamente \(r_f\), pero el modelo
+lo permite sin restricción.
+
+</details>
+
+### Capital Market Line (CML)  [C5 §1]
+\(E[R_P] = r_f + \sigma _P\cdot\dfrac{E[R_M] - r_f}{\sigma _M}\). El retorno esperado crece **lineal** con el riesgo; la pendiente es el Sharpe del portafolio de mercado. A la izquierda de M prestás, a la derecha pedís prestado.
+
+→ portafolio_tangente · teorema_de_separacion · CAPM_como_equilibrio · SML (C4)
+
+<details><summary>más</summary>
+
+Es la recta que sale de \((0, r_f)\) y toca la frontera en el tangente M; domina a toda la
+frontera porque para cada σ da más retorno. La misma recta a los dos lados de M: mezclar con
+\(r_f\) (\(w_M < 1\)) o apalancarse (\(w_M > 1\)). Ojo con el apalancamiento: al ir 2×, lo que se
+duplica es \(\sigma _P\) **y el exceso** sobre \(r_f\), no el retorno total — \(r_f\) es la
+ordenada al origen y no escala. No confundir con la SML de C4: la CML grafica retorno contra
+σ *total* y solo vale para portafolios eficientes; la SML grafica contra β y vale para
+cualquier activo.
+Ej.: \(r_f = 3\%\), M con \(\sigma _M = 12\%\), \(\mu _M = 9\%\) (Sharpe 0.50). Apalancado 2×:
+\(\sigma = 24\%\), \(\mu = 3\% + 24\%\cdot 0.5 = 15\%\) — no 18%.
+
+</details>
+
+### Teorema de separación (Tobin)  [C5 §1]
+Con \(r_f\) disponible, **todos** los inversores, sea cual sea su aversión al riesgo, deberían tener la **misma** cartera de activos riesgosos (M). Solo cambia cuánto mezclan con \(r_f\). "Separación en dos fondos."
+
+→ portafolio_tangente · CML · CAPM_como_equilibrio
+
+<details><summary>más</summary>
+
+Dos caminos que parecen distintos llegan al mismo portafolio. Directo: maximizar el Sharpe —
+el cociente no cambia si escalás \(w\), por eso no hace falta la restricción \(w^\top\mathbf 1 = 1\)
+desde el arranque. Largo: resolver Lagrange "minimizar varianza dado un retorno objetivo
+\(\alpha _0\)" con \(r_f\) incluido, para cualquier \(\alpha _0\): la solución es
+\(w_0 = \lambda _1(\alpha _0)\cdot\Sigma ^{-1}(\mu - r_f\mathbf 1)\). La **dirección**
+\(\Sigma ^{-1}(\mu - r_f\mathbf 1)\) es siempre la misma; solo cambia el escalar adelante. Como
+todos apuntan a la misma dirección, todos tienen el mismo Sharpe; el tangente es el único con
+\(w^\top\mathbf 1 = 1\).
+Ej.: un jubilado y un trader de 25 años deberían tener la misma cartera riesgosa; el jubilado
+la mezcla con 70% de T-bills, el trader se apalanca 1.5×.
+
+</details>
+
+### MVP vs. tangente  [C5 §1]
+**MVP**: ¿cuál es el portafolio de *menor* riesgo? Solo necesita Σ. **Tangente**: ¿cuál tiene *mejor* retorno por unidad de riesgo? Necesita μ, Σ y \(r_f\) — y es tan bueno como la calidad de tu estimación de μ, el input más ruidoso de todos.
+
+→ MVP · portafolio_tangente · el_problema_son_los_inputs · michaud
+
+<details><summary>más</summary>
+
+Menos riesgo pide más bonos (el activo más tranquilo); más Sharpe pide más acciones (el activo
+con mayor μ). El diversificador de baja correlación con ambos (oro) se mantiene estable en los
+dos. Entre MVP y tangente, la frontera resuelta para cada retorno objetivo muestra la
+composición deslizándose suavemente.
+Ej.: SPY (acciones USA), TLT (bonos largos), GLD (oro) con \(\mu \approx (10, 3, 6)\%\),
+\(\sigma \approx (18, 12, 15)\%\) y \(\rho (\text{SPY},\text{TLT}) \approx -0.30\) (¡negativa! —
+TLT sube cuando SPY cae, esa es la clave). MVP: \(w \approx (29, 53, 18)\%\), \(\sigma \approx
+8.0\%\). Tangente con \(r_f = 3\%\): \(w \approx (55, 18, 26)\%\), Sharpe ≈ 0.44. En 2022 esa
+correlación se volvió positiva (suben y bajan juntos) y la frontera histórica colapsó.
+
+</details>
+
+### CAPM como equilibrio  [C5 §1]
+Si **todos** los inversores hacen Markowitz + Tobin y toda acción emitida se termina vendiendo, el portafolio tangente tiene que ser el mercado por capitalización. De ahí sale la misma fórmula \(E[r_i] = r_f + \beta _i(E[r_m] - r_f)\) de C4 — pero como **consecuencia**, no como ajuste estadístico.
+
+→ CAPM (C4) ⚡ · teorema_de_separacion · black_litterman_prior · fama_french (C4)
+
+<details><summary>más</summary>
+
+C4: β se *estima* con OLS sobre datos históricos; es una herramienta ("esto ajusta
+razonablemente bien") que no supone nada sobre los demás inversores. C5: β *sale* de la teoría
+sin datos, **si** todos hacen Markowitz; es una consecuencia ("esto tiene que pasar si el
+mercado se vacía"), y β mide la contribución de cada acción al riesgo del portafolio de
+mercado. La realidad usa la versión empírica; la teórica es la justificación de por qué tiene
+sentido. Fama-French vuelve con la misma pregunta: para FF, SMB y HML son riesgos sistémicos de
+equilibrio (empresas frágiles, ilíquidas, propensas a shocks) que exigen prima; para la visión
+conductual, son anomalías por ineficiencia (sesgos que sobrevaloran el crecimiento y castigan
+de más a las acciones poco analizadas).
+Ej.: esta lectura es la que Black-Litterman invierte en §3: si el mercado *es* el tangente,
+de sus pesos se puede despejar qué μ lo hace óptimo.
+
+</details>
+
+## §2 Por qué Markowitz falla en la práctica
+
+### El problema son los inputs, no la matemática  [C5 §2]
+Markowitz asume μ y Σ **conocidos**. En la realidad se estiman con datos históricos, y C4 ya mostró lo ruidosas que son esas estimaciones. μ es el peor: distinguir un retorno esperado del ruido pide muchos más años de los que hay. No es un descuido del modelo — es su limitación central.
+
+→ beta_se_mueve (C4) · michaud · maldicion_de_la_dimensionalidad · de_valuar_a_estimar (C4)
+
+<details><summary>más</summary>
+
+El error estándar de una media es \(\sigma/\sqrt T\): con \(\sigma = 20\%\) anual hacen falta
+~100 años para que el intervalo de μ tenga ±2%. Σ se estima algo mejor (la varianza se
+identifica con la frecuencia, no con el horizonte), pero también con error, y son muchos más
+números. La secuencia del resto de la clase es "qué input ataca cada cura": shrinkage → Σ;
+Black-Litterman → μ; risk parity → no usa μ; HRP → no invierte Σ.
+Ej.: en C4 un α tardaba décadas en confirmarse — ese mismo α es el que el optimizador toma como
+dato exacto.
+
+</details>
+
+### Michaud (1989): optimizadores de error  [C5 §2]
+El optimizador no distingue señal de ruido: le da **más peso** a los activos con la estimación de retorno **más optimista** — que suele ser, justamente, la más ruidosa. Resultado típico: carteras "de esquina", concentradas en 2-3 activos con posiciones extremas.
+
+→ el_problema_son_los_inputs · colapso_out_of_sample · black_litterman_prior · portafolio_tangente
+
+<details><summary>más</summary>
+
+Es el nombre que Richard Michaud le puso al problema que Black y Litterman veían a diario en
+Goldman (§3). La sensibilidad es brutal cuando hay activos parecidos: el optimizador los trata
+como sustitutos y vuelca todo al que tenga el μ apenas mayor. Con ±2% de perturbación en los
+retornos esperados, los pesos del tangente fluctúan violentamente (cajas de 0% a 70% para un
+mismo activo).
+Ej.: A y B casi gemelos (\(\rho = 0.98\)): con \(\mu _B - \mu _A = 0\) reciben 25% cada uno; con
++0.2 pp (del orden del error normal de estimación) B se lleva 50% y A cae a 0. Un tercer activo
+diversificador C queda estable en ~50% — el daño es entre los sustitutos.
+
+</details>
+
+### Maldición de la dimensionalidad  [C5 §2]
+Σ tiene \(N\) varianzas + \(N(N-1)/2\) covarianzas, todas estimadas con la **misma** historia. Crecimiento cuadrático: con N=10 son 45 covarianzas, con N=50 son 1275 parámetros. Regla práctica: hacen falta del orden de \(N^2\) observaciones.
+
+→ riesgo_de_portafolio · shrinkage_ledoit_wolf · HRP · PCA (C4) · ridge_lasso (C4)
+
+<details><summary>más</summary>
+
+Cada covarianza queda más ruidosa cuantas más haya que estimar a la vez — no es gratis agregar
+activos. El error relativo de \(\hat\Sigma\) crece con N para T fijo, y con 60 observaciones ya
+supera 1 (inestable) para N > 10; con 5 años diarios (1260 obs.) aguanta hasta N ≈ 25. Es la
+misma tensión que Ridge/Lasso en C4 (más parámetros que datos) y la misma que PCA resolvía
+comprimiendo la curva en 3 factores — acá la cura es shrinkage (Σ hacia algo simple) o HRP
+(no invertir Σ).
+Ej.: N=50 acciones diarias → 1275 números; con la regla \(N^2 = 2500\) observaciones son ~10
+años de historia, durante los cuales la Σ "verdadera" cambió varias veces.
+
+</details>
+
+### Colapso out-of-sample  [C5 §2]
+El portafolio óptimo se ve hermoso con los datos que lo construyeron (in-sample). Con datos nuevos suele rendir **peor que un 1/N** equi-ponderado. DeMiguel, Garlappi & Uppal (2009): 14 modelos de asignación, ninguno le ganó de forma consistente al 1/N ingenuo.
+
+→ michaud · maldicion_de_la_dimensionalidad · ridge_lasso (C4) ⚡ · walk_forward · lopez_de_prado (C6)
+
+<details><summary>más</summary>
+
+Es exactamente el sobreajuste de C4: más "libertad" para ajustar el pasado no es gratis. La
+simulación de la slide lo aísla: N=10 activos con μ y Σ verdaderos conocidos, 500 repeticiones,
+*sin* cambio de régimen — solo ruido de estimación. Markowitz ajustado in-sample da Sharpe 0.61;
+evaluado con datos nuevos de la **misma** distribución cae a 0.25; el 1/N evaluado en las mismas
+condiciones da 0.32. Es decir: aun si el mundo no cambiara, estimar μ y Σ y optimizar sobre
+ellos pierde contra no estimar nada.
+Ej.: el 1/N no tiene parámetros que estimar, así que no tiene error de estimación que
+amplificar — ese es todo su secreto.
+
+</details>
+
+### Shrinkage de Σ y Ledoit-Wolf (2004)  [C5 §2]
+\(\Sigma _{\text{shrink}} = \delta\,F + (1-\delta)\,\hat\Sigma\): un promedio ponderado entre "confiar en los datos" (\(\hat\Sigma\) cruda) y "confiar en una estructura simple" (F: identidad, o "todos correlacionan igual"). Ledoit-Wolf da el \(\delta ^*\) óptimo con una fórmula: `sklearn.covariance.LedoitWolf()`.
+
+→ ridge_lasso (C4) ⚡ · maldicion_de_la_dimensionalidad · black_litterman_prior · HRP
+
+<details><summary>más</summary>
+
+Bias-variance trade-off, la misma idea que Ridge: un estimador con menos varianza (más
+estable), aunque tenga un poco de sesgo, predice mejor que uno "perfecto" pero ruidoso. Ridge
+encogía un *vector* β hacia cero; acá se encoge una *matriz* entera hacia una estructura simple.
+\(\delta = 0\) es la estimación cruda (sesgo 0, toda la varianza); \(\delta = 1\) es ignorar los
+datos (varianza 0, todo el sesgo); el error total es la suma y tiene mínimo en un punto
+intermedio, nunca en los extremos. Ledoit y Wolf encontraron la fórmula del δ que minimiza el
+error esperado, calculada de los mismos datos — no hay que adivinarlo. **Pero solo ataca Σ**:
+μ, el input más ruidoso, sigue intacto. Para eso hace falta otra idea → Black-Litterman.
+Ej.: N=20, T=30, 300 corridas: \(\delta ^* \approx 0.30\); el error de Frobenius baja de 0.025
+(cruda) a 0.017.
+
+</details>
+
+## §3 Black-Litterman: la primera solución
+
+### La idea: partir del equilibrio, no de cero  [C5 §3]
+En vez de estimar μ de datos históricos (ruidoso), arrancar de un **prior razonable**: los retornos implícitos \(\Pi\) que hacen que el portafolio de mercado sea el óptimo — el CAPM invertido. Se toman los pesos de capitalización de hoy y se despeja qué μ los haría óptimos.
+
+→ CAPM_como_equilibrio · views · formula_black_litterman · shrinkage_ledoit_wolf
+
+<details><summary>más</summary>
+
+Fischer Black (el de Black-Scholes) y Robert Litterman, en Goldman Sachs, 1990 (publicado
+1992). El problema que veían a diario: los portafolios de Markowitz que armaban para clientes
+eran inestables, poco intuitivos, con cortos absurdos. Nació de la práctica, no de la academia.
+Ingeniería inversa del tangente: si \(w_{mkt} \propto \Sigma ^{-1}(\mu - r_f\mathbf 1)\), entonces
+\(\Pi = \lambda\,\Sigma\,w_{mkt}\) con λ la aversión al riesgo del mercado. En vez de estimar
+μ desde cero, se lo *despeja* de los pesos que ya observamos.
+Ej.: si Apple pesa 7% del S&P 500 hoy, ese 7% ya contiene la opinión colectiva del mercado
+sobre su retorno esperado.
+
+</details>
+
+### Views  [C5 §3]
+Una *view* es una opinión concreta y cuantificada sobre el futuro — "tecnología le gana al mercado en 2 pp este año" — con un nivel de **confianza**. Pueden ser absolutas o **relativas** entre dos activos ("oro le gana a bonos en 3%") sin decir nada del resto. No hace falta opinar sobre todos los activos.
+
+→ black_litterman_prior · formula_black_litterman · views_subjetivas
+
+<details><summary>más</summary>
+
+La combinación es literalmente una regla de Bayes: prior (equilibrio) + evidencia (views) →
+posterior (μ ajustado). Cuanta más confianza le pongas a una view, más se mueve el retorno
+esperado hacia lo que creés; con poca confianza el resultado queda cerca del equilibrio y no
+vuela la cartera. Caso límite para entender la fórmula: confianza cero en todas las views →
+BL devuelve exactamente el equilibrio, ninguna sorpresa.
+Ej.: view relativa "oro − bonos = 3%" toca solo dos activos; los otros tres quedan en su prior.
+
+</details>
+
+### La fórmula de Black-Litterman  [C5 §3]
+\[E[R] = \left[(\tau\Sigma)^{-1} + P^\top\Omega ^{-1}P\right]^{-1}\left[(\tau\Sigma)^{-1}\Pi + P^\top\Omega ^{-1}Q\right].\]
+\(\Pi\): prior de equilibrio. \(P, Q\): qué activos toca cada view y qué dice. \(\Omega\): la confianza en cada view, como una varianza (Ω chico = mucha confianza). \(\tau\): cuánto se confía en el prior.
+
+→ black_litterman_prior · views · por_que_arregla_michaud · shrinkage_ledoit_wolf
+
+<details><summary>más</summary>
+
+Es la media posterior de dos normales: el prior \(\mu \sim N(\Pi, \tau\Sigma)\) y la evidencia
+\(P\mu \sim N(Q, \Omega)\). Precisiones (inversas de varianzas) se suman; el resultado es un
+promedio de Π y las views ponderado por precisión — exactamente la forma del shrinkage de §2,
+pero sobre μ. Verificación del caso límite: si \(\Omega \to \infty\) (confianza cero), el término
+de las views desaparece y \(E[R] \to \Pi\) exacto.
+Ej.: views "Oro +3% sobre Bonos" y "EM +2% sobre USA" sobre 5 activos: Oro pasa de 0.84% (prior)
+a 2.01% (posterior), EM de 6.70% a 7.57%, y USA/Bonos/REIT casi no se mueven. El vector de
+retornos se *tilta* suavemente, no se reemplaza.
+
+</details>
+
+### Por qué arregla el problema de Michaud  [C5 §3]
+El punto de partida ya es razonable (equilibrio), no una estimación ruidosa desde cero. Una view individual, aunque esté mal, mueve **una parte** de μ, no todo. El prior es un **ancla** que impide que un solo número ruidoso vuele la cartera. BL no *resuelve* la estimación de μ — la **esquiva**, empezando de un lugar mejor.
+
+→ michaud · formula_black_litterman · limites_de_BL · risk_parity
+
+<details><summary>más</summary>
+
+Por eso es uno de los modelos más usados en gestión institucional (fondos, family offices,
+algunos bancos): combina rigor con algo que un gestor humano puede *explicar* — "esta cartera,
+porque tal view, con tal confianza". También lo usan bancos centrales y fondos soberanos, donde
+una cartera "rara" es políticamente costosa de justificar. Disponible en `PyPortfolioOpt`; no
+hace falta programarlo desde cero.
+Ej.: en la slide, los pesos BL con views quedan diversificados sobre los mismos activos que el
+equilibrio, mientras que Markowitz crudo con esos mismos μ habría concentrado en 2.
+
+</details>
+
+## §4 Los límites de Black-Litterman
+
+### Sigue necesitando Σ  [C5 §4]
+BL ataca μ, pero Σ sigue siendo la estimada de siempre — y aparece **dos veces** en la fórmula (para despejar Π y para combinarlo con las views). Todo el problema de §2 sigue intacto. BL (μ) y shrinkage (Σ) atacan problemas **distintos**: en la práctica profesional se combinan.
+
+→ formula_black_litterman · shrinkage_ledoit_wolf · maldicion_de_la_dimensionalidad
+
+<details><summary>más</summary>
+
+Shrinkage no es parte del modelo BL en sí mismo; es un preprocesamiento de Σ que se le pasa.
+El pipeline institucional típico: Σ por Ledoit-Wolf → Π despejado de los pesos de mercado →
+views del comité → posterior → optimizar (con restricciones de no-cortos y de concentración
+encima, porque nadie confía del todo).
+Ej.: un error del 20% en \(\sigma _{\text{oro,bonos}}\) mueve Π y mueve la ponderación de la view
+"oro − bonos = 3%" a la vez.
+
+</details>
+
+### El equilibrio como ancla es un supuesto fuerte  [C5 §4]
+Todo el prior asume que el mercado **hoy** está razonablemente bien valuado. Si hay una burbuja, el prior hereda ese error y no lo corrige. No es una falla técnica: es una elección filosófica — "confiar en el mercado como punto de partida".
+
+→ black_litterman_prior · CAPM_como_equilibrio · dQ_dP (C4)
+
+<details><summary>más</summary>
+
+Es el precio de esquivar la estimación de μ: reemplazás "lo que dicen los datos históricos" por
+"lo que dice el mercado", y el mercado también se equivoca — solo que de forma distinta. Un BL
+sin views es, literalmente, comprar el índice por capitalización.
+Ej.: en la burbuja puntocom (1999-2000) los pesos de mercado sobrevaloraban sistemáticamente a
+las tecnológicas; un prior BL de esa época heredaba esa distorsión y la presentaba como
+"equilibrio".
+
+</details>
+
+### Las views siguen siendo subjetivas  [C5 §4]
+¿De dónde sale "tech le gana al mercado en 2%"? De un analista, un modelo propio, una corazonada. ¿Y la confianza? También es una elección humana. BL no elimina el juicio humano — lo hace **controlable**, no lo hace desaparecer. Puente a §5: ¿y si dejamos de pelear con μ?
+
+→ views · risk_parity · risk_budgeting
+
+<details><summary>más</summary>
+
+En la industria las views salen de un comité de inversión, no de una fórmula: la subjetividad
+es humana, no estadística. Markowitz necesita μ y Σ; BL mejora μ pero sigue siendo, en el
+fondo, un problema de estimación. La alternativa es un cambio de **pregunta**, no solo de método:
+en vez de "¿cuánto va a rendir cada activo?", preguntar "¿cuánto riesgo quiero tomar en cada
+uno?" — mucho más fácil de responder con confianza que un pronóstico de retorno.
+Ej.: un comité puede acordar "no más del 30% del riesgo en emergentes" mucho más fácil que
+"emergentes va a rendir 7.5%".
+
+</details>
+
+## §5 Risk Parity: igualar riesgo, no capital
+
+### Contribución al riesgo vs. capital  [C5 §5]
+Markowitz y BL reparten **capital** según cuánto retorno promete cada activo. Risk parity reparte **riesgo**: cada activo debería aportar la misma cantidad de riesgo total. Un 60/40 está balanceado en plata, no en riesgo: las acciones son 60% del capital y **92% de la varianza**.
+
+→ riesgo_de_portafolio · risk_parity_pesos · risk_budgeting · all_weather
+
+<details><summary>más</summary>
+
+La contribución de \(i\) al riesgo es \(w_i\,(\Sigma w)_i / \sigma _p^2\) — su peso por su
+covarianza con la cartera entera; suman 1 por Euler. Con activos de volatilidad muy distinta, el
+capital y el riesgo se desalinean mucho: para que el riesgo quede 50/50, el capital se
+desbalancea *a propósito* hacia el activo tranquilo.
+Ej.: 60/40 con \(\sigma _{\text{acc}} = 16\%\), \(\sigma _{\text{bonos}} = 6\%\), \(\rho = 0.1\):
+acciones aportan 92% de la varianza, bonos 8%. Acciones con el doble de vol que bonos → capital
+33/67 para riesgo 50/50.
+
+</details>
+
+### Cómo se arma: pesos inversamente proporcionales al riesgo  [C5 §5]
+Sin correlaciones: \(w_i \propto 1/\sigma _i\) — al activo más volátil, menos capital. Con correlaciones, hay que igualar la contribución **marginal** de cada uno (una optimización numérica). **No hace falta μ para nada**: solo σ y correlaciones — otra vez un problema de covarianza.
+
+→ contribucion_al_riesgo · MVP · risk_parity_necesita_sigma · HRP
+
+<details><summary>más</summary>
+
+Comparte con MVP el "solo necesita Σ", pero responde otra pregunta: MVP minimiza el riesgo
+total (y por eso concentra en el activo más tranquilo); risk parity lo *reparte* (y por eso
+diversifica por construcción). Es el caso intermedio entre 1/N (ignora Σ) y MVP (la explota al
+máximo).
+Ej.: \(\sigma _{\text{acc}} = 20\%\), \(\sigma _{\text{bonos}} = 8\%\) → \(w_{\text{acc}} \propto
+1/20\), \(w_{\text{bonos}} \propto 1/8\): los bonos reciben 2.5 veces más capital que las acciones
+(≈ 29% / 71%).
+
+</details>
+
+### Dalio, Bridgewater y el All Weather  [C5 §5]
+Ray Dalio (Bridgewater, el hedge fund más grande del mundo) popularizó la idea en los 90. El fondo *All Weather* busca rendir razonablemente bien en **cualquier** escenario macro — inflación, deflación, crecimiento, recesión — balanceando riesgo entre escenarios, no capital.
+
+→ contribucion_al_riesgo · risk_budgeting · actores_institucionales (C1)
+
+<details><summary>más</summary>
+
+La lógica: nadie sabe qué escenario macro viene, así que en vez de apostar a uno, se balancea
+el riesgo entre todos los posibles. Cada escenario tiene activos que le van bien (crecimiento →
+acciones; inflación → commodities, TIPS; deflación → bonos largos), y se les asigna el mismo
+presupuesto de riesgo. Es una de las estrategias institucionales más replicadas del mundo, no
+una curiosidad académica; Bridgewater arrancó en 1975 en un departamento de Nueva York y hoy
+administra más de USD 100 mil millones.
+Ej.: como los bonos tienen mucha menos vol que las acciones, un All Weather termina con mucho
+más capital en bonos — y típicamente *apalancado* para llevar el riesgo total al nivel deseado.
+
+</details>
+
+### Risk budgeting  [C5 §5]
+Risk parity es el caso particular "todos aportan el **mismo** riesgo". Risk budgeting generaliza: asignar deliberadamente más presupuesto de riesgo donde hay más convicción, menos donde hay menos. El presupuesto lo define el inversor, no una estimación de retorno.
+
+→ contribucion_al_riesgo · views · black_litterman_prior
+
+<details><summary>más</summary>
+
+Es el puente natural entre "no confío en μ para nada" (risk parity puro) y "tengo algo de
+convicción pero no quiero apostar todo" (Black-Litterman): la convicción entra como
+*proporción de riesgo*, no como número de retorno. Sigue sin necesitar μ como input directo.
+Ej.: un fondo que confía más en su research de crédito que en acciones le asigna 40% del
+presupuesto de riesgo a crédito en vez de igualarlo con el resto.
+
+</details>
+
+### El problema que risk parity sí tiene: Σ  [C5 §5]
+Evita el problema de μ por completo, pero calcular "contribución al riesgo" todavía necesita Σ (varianzas **y** correlaciones). Con muchos activos, invertir o manipular Σ sigue siendo numéricamente inestable — el mismo problema de §2. Cambia de problema, no lo elimina.
+
+→ maldicion_de_la_dimensionalidad · shrinkage_ledoit_wolf · HRP
+
+<details><summary>más</summary>
+
+Shrinkage se puede combinar acá también — no es exclusivo de Markowitz. Pero la cura más
+radical es no invertir Σ en absoluto: HRP.
+Ej.: con 50 activos, la cuenta de contribución marginal pasa por \(\Sigma w\) con una Σ de 1275
+parámetros ruidosos.
+
+</details>
+
+### HRP: Hierarchical Risk Parity (López de Prado, 2016)  [C5 §5]
+En vez de invertir Σ de una sola vez, **clustering jerárquico**: (1) agrupar los activos más correlacionados entre sí (acciones con acciones, bonos con bonos) en un árbol; (2) repartir el capital de arriba hacia abajo en ese árbol, sin álgebra matricial pesada. Evita invertir la matriz completa → mucho más estable con muchos activos.
+
+→ risk_parity_necesita_sigma · maldicion_de_la_dimensionalidad · lopez_de_prado (C6) · PCA (C4)
+
+<details><summary>más</summary>
+
+La distancia entre activos es \(\sqrt{(1-\rho _{ij})/2}\); el dendrograma agrupa
+oro/commodities, luego acciones/REITs, luego bonos/HY. En cada bifurcación el capital se
+reparte en proporción inversa a la varianza de cada rama, y se baja recursivamente. El resultado
+es "ni tan plano como 1/N, ni tan concentrado como MVP". Es la misma jugada que PCA en C4: usar
+la *estructura* de Σ (pocos grupos) en vez de sus N² números crudos.
+Ej.: 8 ETFs con vol entre 5% y 22%: equal weight σ=8.2%; mínima varianza concentra 78% en un
+solo activo (bonos medios), σ=4.6%; HRP máximo 46% y peso real en 4-5 activos, σ=5.3% — casi el
+riesgo de MVP sin la concentración extrema.
+
+</details>
+
+## §6 El backtest honesto: ¿funciona afuera de la muestra?
+
+### Comparación final: qué necesita cada familia  [C5 §6]
+| | Markowitz | Black-Litterman | Risk Parity / HRP |
+|---|---|---|---|
+| ¿Necesita estimar μ? | Sí, crudo | Sí, anclado al equilibrio | No |
+| ¿Necesita Σ completa? | Sí | Sí | Sí (HRP evita invertirla) |
+| Estabilidad práctica | Baja | Media-alta | Alta |
+| Filosofía | Optimizar retorno/riesgo | Bayes: prior + views | Igualar riesgo, no capital |
+
+→ MVP_vs_tangente · por_que_arregla_michaud · HRP · walk_forward
+
+<details><summary>más</summary>
+
+Leída por columnas es la historia de la clase: cada familia sacrifica algo de "optimalidad"
+teórica a cambio de estabilidad, porque la optimalidad teórica dependía de inputs que no se
+tienen. Leída por filas: μ es el input que todas intentan esquivar; Σ es el que ninguna puede
+esquivar del todo.
+Ej.: un gestor que desconfía de sus pronósticos va a la derecha de la tabla; uno con research
+propio y un comité que lo respalde, al medio.
+
+</details>
+
+### Backtest walk-forward  [C5 §6]
+La forma correcta de simular una estrategia en el tiempo usando **solo** información que existía en cada momento: en cada fecha de rebalanceo, mirar los últimos 252 días hacia atrás, calcular los pesos con eso, sostenerlos y medir el retorno **real** del próximo trimestre; repetir. La ventana "camina" con el calendario.
+
+→ colapso_out_of_sample · lopez_de_prado (C6) · practica_C4 (Ej. 3)
+
+<details><summary>más</summary>
+
+La alternativa tramposa: usar *toda* la historia (incluido el futuro) para fijar los pesos de
+todo el período. Eso es **look-ahead bias**, y hace que cualquier estrategia se vea mejor de lo
+que hubieras logrado. Es la versión más simple de un problema que C6 retoma en serio (purged
+K-fold, embargo): con datos financieros, hasta un walk-forward como este puede tener fugas
+sutiles (solapamiento de ventanas, parámetros elegidos mirando el resultado).
+Ej.: rebalancear en marzo 2020 con una Σ estimada sobre 2019-2020 completo "sabe" que viene el
+crash — un walk-forward honesto solo ve hasta febrero.
+
+</details>
+
+### No hay ganador universal  [C5 §6]
+Mismo backtest walk-forward, 8 ETFs reales, dos ventanas: en **2016-2026** (bull run) gana equal weight; en **2008-2020** (crisis + recuperación) ganan mínima varianza y HRP. Quién gana depende del régimen que le toque a la muestra.
+
+→ walk_forward · HRP · colapso_out_of_sample · VaR_condicional (C4)
+
+<details><summary>más</summary>
+
+Sharpe y drawdown *calculados* de la curva realizada, no elegidos de antemano. 2017-2026:
+EW 0.66 vs. MV 0.46 vs. HRP 0.52 — la menor volatilidad de MV/HRP no alcanzó a compensar su
+menor retorno; drawdowns similares (17.5%-19.4%). 2008-2020: MV 0.60 y HRP 0.44 vs. EW 0.36;
+en la crisis de 2008 sola, el drawdown de EW llegó a −36.9% contra −14.7% de HRP. Lo que las
+familias de riesgo compran no es más Sharpe en promedio: es **protección en las colas**, que
+solo se ve cuando la muestra incluye una.
+Ej.: todo lo de hoy se puede (y se debe) comparar con un backtest honesto — pero backtestear
+estrategias de asignación tiene sus propias trampas, y la clase 6 las pone sobre la mesa.
+
+</details>
+
+## ❓ Dudas de C5
+
+*(Por completar después de repasar la clase.)*
+
+---
 
 # C6 — Machine Learning
 
@@ -2178,9 +2808,10 @@ las exposiciones a factores y la \(\sigma _t\) de GARCH como inputs; VaR/ES ya d
 parámetros interpretables (Heston) usás uno con miles (LSTM, XGBoost, LGBM), y por qué en
 finanzas el overfitting es peor que en otros dominios (poca señal, mucho ruido, series no
 estacionarias — Lopez de Prado). C4 §7 ya dejó planteado el problema: Ridge/Lasso son ML y
-la validación cruzada K-fold miente con series de tiempo. Conecta con C4 (factores como
-features, el zoológico como multiple testing) y con la Unidad 2 (pair trading, predicción
-intradía).
+la validación cruzada K-fold miente con series de tiempo; C5 §6 lo volvió a dejar sobre la mesa
+con el backtest walk-forward y el look-ahead bias (purged K-fold, embargo), y HRP ya es López de
+Prado. Conecta con C4 (factores como features, el zoológico como multiple testing) y con la
+Unidad 2 (pair trading, predicción intradía).
 
 # C7–C8 — Unidad 3 (HFT / baja latencia)
 
