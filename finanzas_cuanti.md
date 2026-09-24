@@ -62,7 +62,7 @@ después. Si no podés resumir la clase en esas tres partes, no la entendiste to
 | C3 | Volatilidad, tasas y crédito | ✅ armada |
 | C4 | Factores y series temporales (del mundo Q al mundo P) | ✅ armada |
 | C5 | Teoría de portafolio: Markowitz, Black-Litterman y Risk Parity | ✅ armada |
-| C6 | Machine Learning | ⬜ pendiente |
+| C6 | Machine Learning: el pipeline riguroso (López de Prado) | ✅ armada |
 | C7–C8 | Unidad 3 (HFT / baja latencia) | ⬜ pendiente |
 | C9 | Wrap del curso + presentaciones (formato póster) | ⬜ pendiente |
 
@@ -76,10 +76,12 @@ resume toda la curva en nivel/pendiente/curvatura (C1) → Heston resume la supe
 nivel/pendiente/curvatura desde los datos (C4). Lo que cambia es quién elige los factores:
 el modelador (paramétrico) o los datos (estadístico). ⚡
 
-**Tercer hilo (C4 → C5): encoger hacia algo simple.** Ridge encoge un vector de coeficientes hacia
+**Tercer hilo (C4 → C5 → C6): encoger hacia algo simple.** Ridge encoge un vector de coeficientes hacia
 cero (C4) → Ledoit-Wolf encoge la matriz Σ entera hacia la identidad, y Black-Litterman encoge μ
 hacia el equilibrio de mercado (C5). Siempre el mismo trade-off sesgo/varianza: un estimador un
-poco sesgado pero estable predice mejor que uno "perfecto" pero ruidoso. ⚡
+poco sesgado pero estable predice mejor que uno "perfecto" pero ruidoso. En C6 el hilo se vuelve
+regla de diseño: L1 en la logística, `min_samples_leaf`, dropout; y en finanzas el mínimo del error
+de test está *muy* a la izquierda — modelos simples ganan. ⚡
 
 ---
 
@@ -2798,20 +2800,744 @@ estrategias de asignación tiene sus propias trampas, y la clase 6 las pone sobr
 
 *(Por completar después de repasar la clase.)*
 
+Como puede ser posible que si se usan tecnicas similares entre todos, se logre una diferencia. Como el riesgo de la mayoria de los serctores fiannecieros debe de definir el mercado actual.
+
+Como estimo al mercado presente? 
+
+Cuan riesgoso es apostar al futuro largo?
+
+Problematica de las views con el sesgo general (algo debe haber ahi).
+
+Pensar en el S&P como logica de market benchmark y como todo se piensa en torno a eso. (como jugar con las acciones sesgadas del S&P y pensar como jugarle en contra/favor)
+
+HRP
+
+se puee modelar merados que no uedo predecir
+
 ---
 
-# C6 — Machine Learning
+# C6 — Machine Learning: el pipeline riguroso
 
 ## Idea general
 
-⬜ Por completar al cursar. Hipótesis: qué cambia cuando en vez de un modelo con 5
-parámetros interpretables (Heston) usás uno con miles (LSTM, XGBoost, LGBM), y por qué en
-finanzas el overfitting es peor que en otros dominios (poca señal, mucho ruido, series no
-estacionarias — Lopez de Prado). C4 §7 ya dejó planteado el problema: Ridge/Lasso son ML y
-la validación cruzada K-fold miente con series de tiempo; C5 §6 lo volvió a dejar sobre la mesa
-con el backtest walk-forward y el look-ahead bias (purged K-fold, embargo), y HRP ya es López de
-Prado. Conecta con C4 (factores como features, el zoológico como multiple testing) y con la
-Unidad 2 (pair trading, predicción intradía).
+**En una frase.** Si le aplicás a datos financieros el pipeline que un data scientist usa por
+reflejo (datos → features → modelo → cross-validation → accuracy alto → producción), obtenés
+modelos que se ven buenísimos y pierden plata. La clase es López de Prado: una herramienta por
+cada supuesto que el mercado rompe, y la tesis de que **el modelo es lo de menos**. El rigor
+está en las puntas (cómo muestreás, qué etiquetás, cómo validás, cuántas cosas probaste), no
+en elegir XGBoost en vez de un random forest.
+
+**Qué problema del mercado resuelve.** C5 dejó abierto de dónde sale μ: la media histórica
+tiene error \(\sigma/\sqrt{T}\), enorme, y Black-Litterman la reemplaza por equilibrio + views.
+La promesa del ML es *aprender* esas views: retornos esperados condicionales al estado del
+mercado. Si hay señal, aunque sea débil, un modelo puede captarla mejor que la media. Pero
+con tan poca señal y tanto ruido, cualquier modelo flexible memoriza el ruido, y el backtest
+es la única historia que hay: no se puede repetir el experimento. Lo que un desk necesita no
+es un modelo más potente, sino un **proceso que no se mienta**: dollar bars, triple barrera,
+meta-labeling, purged K-fold, Deflated Sharpe.
+
+**Cómo conecta.** Hacia atrás: Ridge/Lasso de C4 §7 ya eran ML, y ahí quedó planteado que
+K-fold miente con series de tiempo; hoy se resuelve (purga + embargo). El zoológico de
+factores de C4 era multiple testing; hoy se cuantifica con DSR y PBO ⚡. El walk-forward y
+el look-ahead bias de C5 §6 vuelven, ahora con purga. La vol de ventana corta (o GARCH, C4)
+dimensiona las barreras; la estacionariedad y el test ADF de C4 §4 deciden cuánto diferenciar;
+las colas gordas del GARCH son las que las dollar bars achican. El T≥10N de C5 reaparece
+como "cuánta información independiente tengo". Tercer hilo ⚡: regularizar (L1 en la
+logística, `min_samples_leaf`, dropout) es otra vez encoger hacia algo simple, y en finanzas
+el punto óptimo está *muy* a la izquierda. Hacia adelante: el lado del próximo tick del LOB
+(market making) y RL para ejecución (Almgren-Chriss) aparecen en la Unidad 2/3; LSTM y
+CNN-1D sirven sobre todo en alta frecuencia, donde sí hay datos de sobra.
+
+> Arco de la clase — *Una herramienta por problema.*
+> §1 por qué el ML de manual falla (siete problemas + un adversario que se adapta) →
+> §2 datos: dollar bars → §3 etiquetas: triple barrera + meta-labeling → §4 pesos: unicidad +
+> diferenciación fraccionaria → §5 validación: purged K-fold + embargo → §6 modelos
+> (logística, árboles, RF, boosting, redes) y qué aprendieron (MDI/MDA) → §7 el veredicto:
+> Deflated Sharpe + PBO → §8 AUC y curva de aprendizaje.
+
+## §1 Por qué el ML de manual falla en finanzas
+
+### Dónde aparece cada paradigma en un desk  [C6 §1]
+**Clasificación:** ¿supera al benchmark en T+1? ¿cambia el régimen de vol? ¿qué lado toma el próximo tick? **Regresión:** IV futura de un strike, retorno condicional. **Clustering:** segmentar el universo antes de entrenar. **Redes/RL:** memoria en secuencias cortas, minimizar impacto de ejecución.
+
+→ smile_de_volatilidad (C3) · market_maker (C1) · almgren_chriss (U2) · meta_labeling
+
+<details><summary>más</summary>
+
+El clustering va *antes* del modelo: en vez de un solo modelo para las 500 acciones del S&P
+(que mezcla bancos con tecnológicas), un modelo por grupo parecido — la misma idea que el
+dendrograma de HRP en C5. La pregunta de fondo de las redes recurrentes es si el precio es
+Markoviano (todo lo relevante está en el último precio) o si hay memoria real que explotar.
+Ej.: predecir la IV de un strike a 30 días le sirve a un desk de opciones para armar
+calendar spreads (C2) apostando a vega.
+
+</details>
+
+### Tres familias de features  [C6 §1]
+(1) **Momentum y reversión a la media** (RSI y similares), (2) **flujo institucional** (volumen, put/call ratio, open interest, 13F), (3) **fundamentales y macro** (P/E, P/B, β, correlaciones con FX y commodities). Regla: **más features no es mejor** — 5 limpias le ganan a 200 ruidosas.
+
+→ momentum (C4) · P/E (C1) · beta (C4) · multiple_testing · lasso (C4)
+
+<details><summary>más</summary>
+
+**Momentum** (trend-following): subió N días → seguir; son señales tardías, confirman después
+del movimiento. **Contrarian**: subió demasiado rápido → probablemente vuelva al promedio.
+**RSI**: compara la suba promedio contra la baja promedio en una ventana de N días; va de 0 a
+100, >70 "sobrecomprado", <30 "sobrevendido". **13F**: los fondos con más de $100M
+reportan sus posiciones a la SEC cada trimestre — una señal pública (y lenta) de hacia dónde
+apuestan los institucionales. Cada feature extra es una oportunidad más de encontrar ruido
+que parece señal: es el zoológico de factores de C4 dentro de tu propio modelo.
+Ej.: un modelo con 200 indicadores técnicos va a encontrar alguno "significativo" en
+cualquier muestra; uno con momentum, vol y volumen tiene menos formas de engañarte.
+
+</details>
+
+### Los siete problemas estructurales  [C6 §1]
+(1) datos **no IID**, (2) **señal/ruido ínfimo**, (3) **no estacionariedad**, (4) **leakage**, (5) **overfitting**, (6) **multiple testing**, (7) el backtest es **irrepetible**. Cada herramienta de la clase ataca uno.
+
+→ pipeline_lopez_de_prado · estacionariedad (C4) · zoologico_de_factores (C4) · colapso_out_of_sample (C5)
+
+<details><summary>más</summary>
+
+sklearn asume muestras independientes y de la misma distribución; los retornos tienen
+autocorrelación, clustering de vol (GARCH, C4), y el mercado de 2010 no es el de 2020. El
+pasado caduca, y caduca *endógenamente* (ver adversario adaptativo). El leakage es el futuro
+filtrándose al entrenamiento por vías que no se ven en el índice. Con poca señal, cualquier
+modelo flexible memoriza ruido. Si probaste 100 variantes, la mejor está sesgada hacia
+arriba. Y hay una sola historia: no se puede "probar con nuevos datos del pasado".
+Ej.: un modelo entrenado sobre 2015-2019 no tenía cómo saber qué hacer en marzo 2020 (COVID).
+
+</details>
+
+### Señal/ruido: ¿51% es suerte o habilidad?  [C6 §1]
+En 252 días hábiles, acertar el 51% son 127 aciertos contra 125 fallos: indistinguible de una moneda. Un 55% sostenido 5 años (~1260 días) ya es **extraordinario**.
+
+→ siete_problemas · deflated_sharpe · AUC
+
+<details><summary>más</summary>
+
+Con una moneda justa, la tasa de acierto en n días tiene desvío \(0.5/\sqrt{n}\). En un año,
+\(0.5/\sqrt{252} \approx 3.1\%\): el 51% está a 0.3 desvíos del 50%, ruido puro. En 5 años,
+\(0.5/\sqrt{1260} \approx 1.4\%\): el 55% está a ~3.5 desvíos. La señal existe pero es tan
+chica que hacen falta muchos años para verla — y en muchos años el mercado cambió de régimen.
+Ej.: por eso en finanzas un AUC de 0.6 ya es "interesante" (§8), algo que en visión por
+computadora sería un fracaso.
+
+</details>
+
+### El adversario adaptativo  [C6 §1]
+En física el electrón no lee tus papers. El mercado sí: si tu patrón funciona y se conoce, otros lo operan y **el patrón desaparece**. La no estacionariedad no es ruido de fondo: es endógena.
+
+→ zoologico_de_factores (C4) · no_estacionariedad · siete_problemas
+
+<details><summary>más</summary>
+
+McLean-Pontiff (C4): los factores publicados pierden ~50% del premio post-publicación. Tu
+competencia lee los mismos libros, baja los mismos datos y corre los mismos modelos. La
+ventaja sostenible viene de solo tres lugares: **datos** que otros no tienen, **rigor** que
+otros no aplican, o **velocidad** (Unidad 3). Esta clase es sobre el rigor.
+Ej.: esto responde en parte la duda de C5 de "cómo se logra una diferencia si todos usan
+técnicas similares": la técnica no alcanza; el diferencial es datos, rigor o velocidad.
+
+</details>
+
+### Calibrar expectativas: el Sharpe honesto  [C6 §1]
+Un Sharpe **out-of-sample** de 0.5 sostenido ya es muy bueno; 1.0 es excelente; 2+ es sospechoso. Si un backtest muestra Sharpe 3, la pregunta no es "cuánto invierto" sino "**dónde está el bug**".
+
+→ alpha_y_sharpe (C4) · deflated_sharpe · leakage
+
+<details><summary>más</summary>
+
+Los Sharpe altos de un backtest suelen venir de leakage (el futuro filtrado), de haber
+probado muchas variantes (multiple testing) o de ignorar costos de transacción. El resto de
+la clase es la caja de herramientas para encontrar cuál de los tres es.
+Ej.: los números del backtest de C5 (Sharpe 0.4–0.7) son los normales para estrategias
+reales de asignación.
+
+</details>
+
+### El pipeline de López de Prado: una herramienta por problema  [C6 §1]
+**Datos** → dollar bars · **Etiquetas** → triple barrera + meta-labeling · **Pesos** → unicidad + diferenciación fraccionaria · **Validación** → purged K-fold + embargo · **Modelo** → bagging/boosting + MDI/MDA · **Veredicto** → Deflated Sharpe + PBO. El orden importa.
+
+→ siete_problemas · dollar_bars · triple_barrera · purged_kfold · deflated_sharpe
+
+<details><summary>más</summary>
+
+Cada etapa asume que la anterior se hizo bien. El error típico es sofisticar el modelo
+(etapa 5) con etiquetas malas y una validación incorrecta. López de Prado invierte la
+prioridad: los modelos son lo de menos (un random forest alcanza), el rigor está en datos,
+etiquetas y validación.
+Ej.: un XGBoost con K-fold estándar va a "ganarle" a un random forest con purged K-fold, y
+va a ser el que pierda plata en producción.
+
+</details>
+
+## §2 Los datos: muestrear por actividad, no por reloj
+
+### Vela (bar): OHLC  [C6 §2]
+Cada vela resume un intervalo con cuatro números: **Open, High, Low, Close**. El cuerpo es el rango Open–Close (color según el signo), la mecha es lo que el precio tocó y no sostuvo. Lo único que cambia entre time/tick/volume/dollar bars es **la regla que cierra la vela**.
+
+→ time_bars · dollar_bars
+
+<details><summary>más</summary>
+
+Es el bloque atómico de toda serie de precios: cualquier dato "diario" de yfinance es una
+serie de velas de 1 día.
+Ej.: una vela con cuerpo chico y mechas largas dice "hubo mucha pelea y nadie ganó".
+
+</details>
+
+### Time bars y su problema  [C6 §2]
+Cortar en intervalos iguales de reloj (1 día, 1 hora, 5 min). Pero el mercado no genera información a ritmo de reloj: **sobre-muestreás la siesta y sub-muestreás el pánico**. Resultado: colas pesadas, vol agrupada, autocorrelación en \(r^2\).
+
+→ vela_OHLC · dollar_bars · GARCH (C4) · siete_problemas
+
+<details><summary>más</summary>
+
+Un martes de agosto a las 12:30 no pasa nada y la time bar registra un punto igual; un día de
+Fed a las 9:30 pasa todo y sigue siendo un solo punto. Esas son justo las propiedades
+(colas gordas, clustering de vol) que GARCH modelaba en C4, y las que rompen los supuestos de
+cualquier modelo de ML. La idea: que el reloj corra al ritmo de la **actividad**, no del
+tiempo físico. Analogía física: muestrear por eventos (cada colisión), no por segundos.
+Ej.: si las velas se cierran por actividad, un flash crash se parte en muchas velas y cada
+retorno individual es menos extremo.
+
+</details>
+
+### Tick, volume y dollar bars  [C6 §2]
+**Tick:** una vela cada N operaciones. **Volume:** cada N acciones. **Dollar:** cada N **dólares** operados. Las dollar bars son las más robustas, y sus retornos tienen menos curtosis y menos autocorrelación en \(r^2\): más cerca de IID-normal.
+
+→ time_bars · siete_problemas · colas_gordas (C4) · LOB (U2)
+
+<details><summary>más</summary>
+
+Tick bars: una orden de 10.000 acciones partida en 100 ticks infla la actividad. Volume bars
+corrigen eso, pero 100 acciones de 2010 no son 100 acciones de 2026 (el precio cambió 5×).
+Dollar bars son robustas a splits, a la suba del precio y comparables entre activos y épocas.
+La recompensa es medible: mejor materia prima para ML porque se violan menos supuestos.
+Ej.: en SPY intradía, con la misma cantidad de barras, los retornos de dollar bars tienen
+menos exceso de curtosis que los de time bars (el Ejercicio 1 de la práctica lo testea).
+
+</details>
+
+## §3 Las etiquetas: qué le preguntás al modelo
+
+### Fixed-horizon y sus dos fallas  [C6 §3]
+El etiquetado ingenuo: mirar el retorno a N días fijos, +1 si sube, −1 si baja. Falla 1: **ignora el camino** (el stop-loss te sacó antes). Falla 2: **ignora la vol del momento** (un +1% en calma es señal, en pánico es ruido).
+
+→ triple_barrera · GARCH (C4)
+
+<details><summary>más</summary>
+
+Caíste 8% el día 3 y recuperaste el día 10: la etiqueta dice "ganaste", pero en la vida real
+tu stop te sacó el día 3. La etiqueta describe un trade que nadie vivió. Y con umbral fijo y
+vol variable, las etiquetas terminan midiendo el régimen de vol, no tu señal.
+Ej.: con fixed-horizon, casi todas las etiquetas "extremas" caen en 2008 y 2020, porque es
+cuando los retornos son grandes, no cuando la señal funcionó.
+
+</details>
+
+### Triple barrera  [C6 §3]
+Tres barreras alrededor de cada entrada: **take-profit** (+1), **stop-loss** (−1) y **vertical** de tiempo máximo (0, o el signo del retorno). La etiqueta es **la primera que se toca**. Barreras adaptativas a la vol: \(p^{+} = p_0(1 + k\hat\sigma _t)\), \(p^{-} = p_0(1 - k\hat\sigma _t)\).
+
+→ fixed_horizon · meta_labeling · etiquetas_solapadas · GARCH (C4)
+
+<details><summary>más</summary>
+
+\(k\) es un hiperparámetro; \(\hat\sigma _t\) es el desvío de los últimos 20 retornos. Se puede
+usar GARCH si ya está calibrado, pero la vol histórica simple alcanza: el objetivo es
+adaptar las barreras al régimen, no modelar la dinámica de la vol. En calma las barreras se
+acercan, en pánico se alejan: la **misma pregunta** en todo régimen. Barreras asimétricas
+(arriba ≠ abajo) expresan un sesgo direccional. La barrera vertical es la que después genera
+el solapamiento de etiquetas (§4) y el leakage (§5).
+Ej.: con \(k = 2\) y \(\hat\sigma _t = 1\%\) diario, entrar a $100 pone barreras en $102 y
+$98; si la vol sube a 3%, pasan a $106 y $94.
+
+</details>
+
+### Meta-labeling  [C6 §3]
+Dos modelos. El **primario** decide la **dirección** (puede ser simple: cruce de medias, un factor de C4, la intuición del gestor). El **meta-modelo** no predice el mercado: predice **cuándo el primario acierta**, y eso define el tamaño de la apuesta.
+
+→ triple_barrera · bet_sizing_kelly · precision_vs_recall · black_litterman (C5)
+
+<details><summary>más</summary>
+
+Receta: (1) correr el primario y obtener señales largo/corto; (2) etiquetar cada señal con la
+triple barrera (¿el trade habría ganado?); (3) entrenar el meta-modelo (un RF alcanza) con
+features del momento — vol, régimen, fuerza de la señal, hora, liquidez — para estimar
+P(el primario acierta); (4) en producción, tamaño = dirección_primario × f(prob_meta).
+"¿Sube o baja?" y "¿es buen momento para mi señal?" no son igual de difíciles: la segunda
+tiene estructura persistente (el régimen) que la primera no tiene. Triple barrera es una
+herramienta de *etiquetado*; meta-labeling es un *framework de dos modelos* que usa esas
+etiquetas.
+Ej.: un momentum que acierta 52% en general puede acertar 60% en regímenes de vol baja y 45%
+en crisis; el meta-modelo aprende a apagarlo en crisis.
+
+</details>
+
+### Precision vs. recall: por qué el meta-modelo sube el Sharpe  [C6 §3]
+**Recall** = fracción de los trades buenos que capturaste. **Precision** = fracción de los trades que tomaste que fueron buenos. El meta-modelo **sube precision y baja recall** — y eso es exactamente lo que querés.
+
+→ meta_labeling · AUC · bet_sizing_kelly
+
+<details><summary>más</summary>
+
+Sin meta operás todas las señales: recall alto (no te perdés ninguno bueno) pero precision
+baja (muchos malos también). Con meta operás solo en régimen favorable: casi todos los que
+tomás son buenos, y te perdés algunos buenos que no pasaron el filtro. El Sharpe sube aunque
+aciertes menos veces **en total**: apostaste grande cuando había que apostar.
+Ej.: 100 señales, 50 buenas. Sin meta: operás 100, precision 50%, recall 100%. Con meta:
+operás 30, 24 buenas → precision 80%, recall 48%.
+
+</details>
+
+### Bet sizing: criterio de Kelly  [C6 §3]
+De la probabilidad al tamaño: \(K\% = W - \dfrac{1 - W}{R}\), con \(W\) la tasa de acierto y \(R\) el ratio beneficio/riesgo promedio. La \(W\) puede ser la probabilidad del meta-modelo.
+
+→ meta_labeling · regresion_logistica
+
+<details><summary>más</summary>
+
+Kelly maximiza el crecimiento logarítmico del capital. Si \(K \le 0\), no hay ventaja: no se
+opera. En la práctica se usa una fracción de Kelly (medio Kelly), porque \(W\) es una
+estimación con error y Kelly completo con \(W\) sobreestimado lleva a la ruina.
+Ej.: \(W = 0.55\), \(R = 1\): \(K = 0.55 - 0.45 = 10\%\) del capital. Con \(W = 0.50\),
+\(K = 0\).
+
+</details>
+
+### Clases desbalanceadas: class_weight  [C6 §3]
+En el dataset del meta-modelo, ~90% de las etiquetas son 0 (no era buen momento). Un modelo que **siempre predice 0 tiene 90% de accuracy** y es inútil. Solución: `class_weight='balanced'`, que pesa más los errores en la clase rara.
+
+→ meta_labeling · AUC · pesos_por_unicidad
+
+<details><summary>más</summary>
+
+Es el mismo problema que en detección de fraude: los eventos raros son justo los que
+importan. Con 10% de unos, `balanced` penaliza un error en un 1 nueve veces más que un error
+en un 0. Es una línea de código, no toca los datos y no introduce leakage (a diferencia de
+sobre-muestrear, que duplica ventanas solapadas). Y por esto mismo la métrica no es accuracy
+sino AUC (§8).
+Ej.: `RandomForestClassifier(class_weight='balanced')`.
+
+</details>
+
+## §4 Los pesos: cuánta información independiente tenés
+
+### Etiquetas solapadas: contar dos veces  [C6 §4]
+Con barrera vertical de 10 días, la etiqueta del lunes usa los días 1–10 y la del martes los días 2–11: comparten 9 de 10. El dataset dice n = 2.500; de información independiente tenés quizás **250**.
+
+→ triple_barrera · pesos_por_unicidad · purged_kfold · T≥10N (C5)
+
+<details><summary>más</summary>
+
+Todo lo que asume independencia se sobre-confía: errores estándar, p-values, la CV, y el
+bootstrap del random forest (¡muestrea con reemplazo casi las mismas ventanas!). Es el mismo
+pecado que el T≥10N de C5 (menos datos efectivos que los que creés), en versión temporal.
+Ej.: un RF con 500 árboles sobre etiquetas solapadas termina con árboles casi idénticos entre
+sí, y el promedio no reduce la varianza como debería.
+
+</details>
+
+### Pesos por unicidad  [C6 §4]
+\(c_t\) = cuántas etiquetas tienen su ventana sobre el día \(t\); la unicidad de la muestra \(i\) es \(\bar u_i = \frac{1}{|T_i|}\sum _{t \in T_i} \frac{1}{c_t}\). No comparte días → \(\bar u_i = 1\); solapa todo → \(\bar u_i \approx 1/\text{solapamiento}\).
+
+→ etiquetas_solapadas · class_weight · random_forest
+
+<details><summary>más</summary>
+
+Se enchufa directo: `sample_weight=u` en sklearn. Una línea, "medio dataset de honestidad":
+las muestras que repiten información pesan menos, y el modelo ve aproximadamente la cantidad
+de información que realmente hay.
+Ej.: con ventanas de 10 días que empiezan todos los días, cada día está cubierto por ~10
+etiquetas, así que \(\bar u_i \approx 0.1\) para casi todas.
+
+</details>
+
+### Diferenciación fraccionaria  [C6 §4]
+Precio (\(d = 0\)): tiene memoria pero no es estacionario. Retorno (\(d = 1\)): estacionario pero amnésico. Diferenciar \(d \in (0,1)\): \(\tilde X_t \approx X_t - 0.40X_{t-1} - 0.12X_{t-2} - 0.06X_{t-3} - \dots\) (con \(d = 0.4\)). Buscar el **mínimo d que pasa el ADF**.
+
+→ estacionariedad (C4) · tests_ADF_KPSS (C4) · ARIMA (C4) · retorno_simple_vs_log (C4)
+
+<details><summary>más</summary>
+
+El precio sabe cosas útiles (¿estamos en máximo histórico? ¿cerca de un soporte?), pero no
+sirve para entrenar porque no es estacionario. Diferenciarlo entero (\(d = 1\), la "d" de
+ARIMA en C4) borra el nivel. Con \(d\) fraccionario los pesos son
+\(w_k = -w_{k-1}\frac{d - k + 1}{k}\), que decaen suavemente: la serie recuerda el pasado con
+cada vez menos peso, y eso alcanza para volverla estacionaria. En índices de acciones
+típicamente \(d^* \approx 0.35\)–\(0.5\).
+Ej.: con \(d = 0.4\) la serie pasa el ADF y tiene correlación >0.99 con el precio original:
+entrenable y con memoria del nivel.
+
+</details>
+
+## §5 La validación honesta: purged K-fold y embargo
+
+### Por qué K-fold estándar miente: dos vías de leakage  [C6 §5]
+**Vía 1, barajar el tiempo** (la obvia): entrenar con marzo para "predecir" febrero. **Vía 2, solapamiento de etiquetas** (la invisible): una muestra de entrenamiento del 28/1 con ventana hasta el 5/2 ya vio el test que empieza el 1/2.
+
+→ el_puente_al_ML (C4) · etiquetas_solapadas · purga · embargo · walk_forward (C5)
+
+<details><summary>más</summary>
+
+K-fold parte en K bloques, entrena en K−1, testea en 1 y rota: con datos IID es perfecto. Con
+series financieras, la segunda vía es la traicionera: la fecha de la muestra dice "enero",
+pero su contenido es febrero. El leakage no está en el índice, está en la **ventana**. El
+resultado: scores inflados con cara de legítimos; el modelo "funciona" hasta producción.
+Ej.: es la advertencia que C4 §7 dejó planteada y C5 §6 volvió a nombrar.
+
+</details>
+
+### Purga  [C6 §5]
+Eliminar del **entrenamiento** toda muestra cuya ventana de etiqueta se solape con el test. Si el test es \([t_1, t_2]\) y la etiqueta de \(i\) vive en \([t_i, t_i + h]\), se descarta \(i\) si los intervalos se intersecan.
+
+→ k_fold_miente · embargo · etiquetas_solapadas
+
+<details><summary>más</summary>
+
+Ataca la vía 2 directamente. Regla práctica: ventana de etiqueta de h días → purga de h días
+a cada lado del test.
+Ej.: test = febrero, h = 10 días → se tiran del train las muestras de los últimos 10 días de
+enero.
+
+</details>
+
+### Embargo  [C6 §5]
+Además de purgar, eliminar un **colchón extra después del test** (ej. 1% del dataset, o ≥ h/2). Motivo: la correlación serial — la primera muestra post-test "recuerda" al test aunque su ventana no lo toque.
+
+→ purga · GARCH (C4) · clustering_de_vol (C4)
+
+<details><summary>más</summary>
+
+El clustering de vol de C4 transporta información: si el test terminó en pánico, los días
+siguientes también son de vol alta, y entrenar con ellos filtra el régimen del test.
+Ej.: test en marzo 2020; sin embargo, entrenar con abril 2020 le enseña al modelo el
+régimen de marzo.
+
+</details>
+
+### Purged K-fold vs. walk-forward con purga  [C6 §5]
+**Purged K-fold** usa todos los datos (hasta futuros en train): eficiente, para **elegir modelo e hiperparámetros**. **Walk-forward + purga** entrena en el pasado y testea en el futuro: replica producción, para el **veredicto final**.
+
+→ walk_forward (C5) · purga · embargo · deflated_sharpe
+
+<details><summary>más</summary>
+
+Walk-forward es el más honesto, pero los últimos datos casi no entrenan y las estimaciones
+son más variables. Purged K-fold no simula producción exactamente pero aprovecha mejor la
+muestra. En la práctica: purged K-fold para seleccionar, walk-forward + purga para decidir
+antes de producción.
+Ej.: el backtest de C5 §6 era un walk-forward sin etiquetas solapadas (pesos a partir de
+252 días atrás); con triple barrera habría que agregarle la purga.
+
+</details>
+
+## §6 El modelo y sus features: qué aprendió de verdad
+
+### Regresión logística  [C6 §6]
+\(P(y = 1 \mid x) = \sigma(w^\top x + b) = \dfrac{1}{1 + e^{-(w^\top x + b)}}\). Interpretable, probabilística, rara vez sobreajusta. Con penalización \(\lambda\lVert w\rVert _1\) (la de Lasso) lleva pesos irrelevantes a cero. **El baseline obligado.**
+
+→ ridge_lasso (C4) · bet_sizing_kelly · AUC · seis_modelos
+
+<details><summary>más</summary>
+
+El ajuste busca \(w\) y \(b\) que hagan las probabilidades predichas lo más parecidas posible a
+lo que pasó (máxima verosimilitud). La L1 no es "correr un Lasso aparte": es sumar esa
+penalización a lo que se minimiza (las slides dicen "clase 5"; en este mapa Lasso está en
+C4 §7). \(w_j > 0\) → la feature \(j\) empuja la probabilidad hacia arriba, y la salida es
+directamente un input de bet sizing. Limitaciones: frontera lineal (un hiperplano) y no
+captura interacciones salvo que las agregues a mano (ej. momentum × vol). Si la señal es
+débil y lineal, ningún modelo complejo le gana.
+Ej.: en las slides, con vol baja el modelo da P = 0.87 de señal válida; en pánico (vol 80%)
+cae a 0.11; con RSI muy sobrevendido (20), 0.03.
+
+</details>
+
+### Árbol de decisión  [C6 §6]
+Una cadena de preguntas binarias ("¿momentum > 0.3?"); cada hoja predice el promedio o la clase mayoritaria. Cada corte es **perpendicular a un eje**: el espacio queda partido en **rectángulos**. Hiperparámetros: `max_depth` y `min_samples_leaf`.
+
+→ random_forest · gradient_boosting · redes_neuronales
+
+<details><summary>más</summary>
+
+`max_depth` chico = underfit; grande = memoriza el ruido. Subir `min_samples_leaf` es la
+forma más simple de frenar el sobreajuste. Captura no-linealidades e interacciones sin
+asumir forma funcional, pero si la señal es una interacción diagonal (no alineada a los
+ejes), el árbol la aproxima con una escalera de rectángulos.
+Ej.: profundidad 3 sobre (momentum, vol): "¿vol ≤ 0.2? → ¿momentum > 0.1? → operar".
+
+</details>
+
+### Random Forest (bagging)  [C6 §6]
+**B árboles en paralelo**, cada uno sobre un remuestreo bootstrap (y un subconjunto de features), promediados al final: el promedio **reduce varianza**. Robusto, difícil de arruinar, poco tuneo; rara vez el mejor, rara vez el peor.
+
+→ arbol_de_decision · gradient_boosting · pesos_por_unicidad · MDI_MDA · meta_labeling
+
+<details><summary>más</summary>
+
+Hiperparámetros: `n_estimators` (más es casi gratis), `max_features` (≈ \(\sqrt p\)),
+`max_depth`. Los árboles nunca se miran entre sí durante el entrenamiento. Es el modelo que
+López de Prado recomienda por defecto: maneja features mixtas y da importancias. Su punto
+débil en finanzas es el bootstrap sobre etiquetas solapadas (§4): hay que pasarle
+`sample_weight` por unicidad.
+Ej.: el meta-modelo del §3 es típicamente un RF.
+
+</details>
+
+### Gradient boosting: XGBoost / LightGBM  [C6 §6]
+Árboles **en secuencia**: cada uno aprende el **residuo** de los anteriores, y la predicción es la suma. State of the art en datos tabulares; puede ganarle al RF si la señal es real y no lineal — y es **el que más explota el leakage** si la CV no es honesta.
+
+→ random_forest · purged_kfold · seis_modelos
+
+<details><summary>más</summary>
+
+Hiperparámetros: `learning_rate` (η), `n_estimators` + early stopping, `max_depth` chico.
+LightGBM es 5–20× más rápido (crece hoja por hoja). RF reduce varianza promediando árboles
+profundos; boosting reduce sesgo sumando árboles chicos. Justamente por ser tan bueno
+encontrando estructura, encuentra también la estructura que filtra el leakage.
+Ej.: si con K-fold estándar XGBoost gana por mucho y con purged K-fold empata con la
+logística, lo que había aprendido era el leakage.
+
+</details>
+
+### Redes neuronales y funciones de activación  [C6 §6]
+Capas que combinan linealmente y aplican una no-linealidad: \(h = \varphi(W h_{\text{ant}} + b)\). Sin \(\varphi\), apilar capas sigue siendo lineal. **Sigmoide** (salida como probabilidad), **tanh**, **ReLU** \(\max(0, z)\) (default en capas ocultas: no satura del lado positivo).
+
+→ arbol_de_decision · LSTM · ridge_lasso (C4)
+
+<details><summary>más</summary>
+
+Apiladas, las capas "doblan" el espacio hasta que una frontera curva se vuelve separable: por
+eso trazan curvas suaves en vez de rectángulos. Hiperparámetros: profundidad y ancho (más
+capacidad para señal *y* ruido), `learning_rate` (el más sensible), dropout y weight decay
+(las versiones-red de la λ de Ridge/Lasso). Cuando sigmoide/tanh saturan, su derivada es ≈0 y
+el gradiente se diluye capa a capa. Máxima flexibilidad, la más fácil de sobreajustar con
+pocos datos y la menos interpretable.
+Ej.: en `make_moons` (dos medialunas entrelazadas) el árbol talla escalones; la red sigue la
+curva.
+
+</details>
+
+### LSTM  [C6 §6]
+Red **recurrente**: procesa la secuencia paso a paso y su estado (memoria) vuelve a entrar como insumo del paso siguiente. Las **compuertas aprendibles** (qué olvidar, qué agregar, qué mostrar) resuelven que una RNN simple olvide rápido.
+
+→ redes_neuronales · CNN_1D · LOB (U2)
+
+<details><summary>más</summary>
+
+Promesa del deep learning: darle la serie *cruda* y que aprenda sus propios patrones, en vez
+de features que diseñamos nosotros (vol, momentum, RSI). Hiperparámetro extra: tamaño del
+estado de memoria. Contra: necesita **muchos** más datos que un RF. Por eso sirve sobre todo
+en alta frecuencia y LOB, donde hay millones de observaciones y patrones locales fuertes
+(Zohren).
+Ej.: con 20 años de datos diarios (~5000 puntos, ~500 independientes) una LSTM memoriza;
+con un día de ticks de un LOB tiene material de sobra.
+
+</details>
+
+### CNN-1D: ARIMA con pesos aprendidos  [C6 §6]
+Desliza una ventana de pesos sobre la serie (un promedio ponderado de los últimos K valores), como un promedio móvil pero con pesos **aprendidos**, muchos kernels en paralelo y capas apiladas. **ARIMA es una CNN con un solo kernel fijo y sin capas.**
+
+→ ARIMA (C4) · LSTM · redes_neuronales
+
+<details><summary>más</summary>
+
+Cada kernel detecta un patrón local distinto de precio/volumen, y las capas apiladas
+combinan patrones en otros más abstractos. La diferencia con ARIMA no es la operación (una
+suma ponderada del pasado) sino quién elige los pesos: un modelo teórico con pocos
+parámetros o los datos.
+Ej.: es el segundo hilo del curso ⚡ otra vez — el modelador elige la estructura (ARIMA,
+Nelson-Siegel) o los datos la descubren (CNN, PCA).
+
+</details>
+
+### Importancia de features: MDI vs. MDA  [C6 §6]
+**MDI** (Mean Decrease Impurity): cuánto reduce cada feature la impureza de los cortes del árbol, **in-sample**. **MDA** (Mean Decrease Accuracy): cuánto empeora el score **out-of-sample** si permutás esa feature. Regla de la clase: **MDA sobre MDI**.
+
+→ random_forest · purged_kfold · efecto_sustitucion · zoologico_de_factores (C4)
+
+<details><summary>más</summary>
+
+*(Las slides de MDI/MDA no vinieron en el PDF — el conteo salta de la 32 a la 35 y de la 41
+a la 43; esto es de López de Prado, completar con lo que se vio en clase.)* MDI sale gratis
+del RF, pero se calcula sobre el train: premia features que sirvieron para memorizar, y
+sesga hacia features con muchos valores posibles. MDA se calcula sobre el test (con purged
+K-fold): mide lo que la feature aporta a predecir, no a memorizar. **Trampa de la
+sustitución:** si dos features son casi iguales (momentum 20 y 21 días), permutar una no
+duele porque la otra la reemplaza, y las dos parecen inútiles. Arreglo: agrupar features
+correlacionadas (clusters, como en HRP) y medir la importancia del grupo.
+Ej.: una feature con importancia alta en MDI y ~0 en MDA es una que el modelo usó para
+memorizar ruido.
+
+</details>
+
+### Seis modelos, una sola conclusión  [C6 §6]
+Cambia la interpretabilidad (logística > árboles > redes), el costo (logística barata → LSTM/CNN caras) y la capacidad no lineal (al revés). **No cambia:** con señal/ruido tan bajo, más capacidad solo memoriza mejor el ruido. El "mejor modelo" lo decide la **validación**, no la arquitectura.
+
+→ pipeline_lopez_de_prado · purged_kfold · curva_sesgo_varianza
+
+<details><summary>más</summary>
+
+Con CV ingenua gana el más complejo; con purged CV casi ninguno gana de verdad. Por eso
+López de Prado lo dice sin vueltas: sofisticar el modelo es lo **último**; primero datos,
+etiquetas y validación honesta.
+Ej.: "un random forest con buenos datos y buenas etiquetas le gana a XGBoost con datos
+sucios" (lo que se llevan, punto 5).
+
+</details>
+
+## §7 El backtest que miente: Deflated Sharpe y PBO
+
+### El Sharpe selectivo: el máximo del ruido  [C6 §7]
+Tirás 200 monedas 5 años y elegís la que más caras dio: parece que "funciona", pero su Sharpe esperado es 0. **SR₀** = el mejor Sharpe que el azar fabrica con N intentos. Con N = 200 y 5 años, las slides dan SR₀ ≈ 0.7–1.0.
+
+→ zoologico_de_factores (C4) · deflated_sharpe · PBO · que_cuenta_como_intento
+
+<details><summary>más</summary>
+
+Es exactamente lo que hacés al probar 200 variantes y quedarte con la mejor. SR₀ crece con
+el número de intentos (como el máximo de N normales, ~\(\sqrt{2\ln N}\)) y baja con la
+longitud de la muestra (~\(1/\sqrt{T}\)). Si tu modelo reporta Sharpe 0.8 después de 200
+variantes, no hay evidencia de señal: es lo que el ruido ya daba.
+Ej.: es el zoológico de factores de C4 en tu propia computadora ⚡.
+
+</details>
+
+### Qué cuenta como un intento  [C6 §7]
+**Todo lo que hiciste mirando el resultado.** Tres learning rates → +3. Mover el umbral de la triple barrera → +1. Agregar una feature porque mejoró → +1. Probar SPY y QQQ y quedarte con el mejor → +2. Cambiar el período de train "porque el mercado cambió" → +1.
+
+→ sharpe_selectivo · deflated_sharpe · checklist_de_higiene
+
+<details><summary>más</summary>
+
+El N del DSR es el N **verdadero**, no el confesable. Por eso hay que registrar todos los
+experimentos, incluidos los que fallaron.
+Ej.: un "solo probé un modelo" suele esconder 20–50 decisiones tomadas mirando el backtest.
+
+</details>
+
+### Deflated Sharpe Ratio (DSR)  [C6 §7]
+¿Tu Sharpe es significativamente mayor que SR₀? \[DSR = \Phi\!\left(\frac{(\widehat{SR} - SR_0)\sqrt{T - 1}}{\sqrt{1 - \gamma _3\widehat{SR} + \frac{\gamma _4 - 1}{4}\widehat{SR}^2}}\right)\] Es la **probabilidad de que la estrategia sea genuina**. DSR > 0.95: defendible; ≈ 0.5: una moneda; < 0.5: peor que el ruido.
+
+→ sharpe_selectivo · alpha_y_sharpe (C4) · colas_gordas (C4) · PBO
+
+<details><summary>más</summary>
+
+Numerador: cuánto te alejás del mejor ruido, escalado por la longitud de la muestra.
+Denominador: el error de estimación del Sharpe, corregido por no-normalidad — \(\gamma _3\) es
+la asimetría y \(\gamma _4\) la curtosis (3 en la normal, así que \((\gamma _4 - 1)/4 = 1/2\) da
+el caso gaussiano). Skew negativa y colas gordas agrandan el denominador: inflan el Sharpe
+calculado, así que se penalizan. \(\Phi\) es la normal acumulada. Es el mismo test de
+hipótesis de siempre, pero contra SR₀ en vez de contra 0.
+Ej.: si el DSR deflacta tu Sharpe a 0.3, no es mala suerte, es información: el experimento
+gastó el dataset sin encontrar señal.
+
+</details>
+
+### PBO: Probability of Backtest Overfitting  [C6 §7]
+Elegiste la mejor estrategia mirando una mitad de los datos. Si hubieras mirado la **otra** mitad, ¿seguiría siendo la mejor? PBO repite eso sobre todas las particiones y cuenta qué fracción de veces la campeona in-sample cae entre las **peores** out-of-sample.
+
+→ deflated_sharpe · colapso_out_of_sample (C5) · purged_kfold
+
+<details><summary>más</summary>
+
+PBO ≈ 50%: elegir la estrategia ganadora es lo mismo que tirar una moneda — el proceso de
+selección encontró suerte, no señal. DSR mira a la estrategia elegida; PBO mira al
+*proceso* de elegir.
+Ej.: es el colapso out-of-sample de Markowitz (C5) medido como probabilidad: el portafolio
+"óptimo" in-sample termina entre los peores afuera.
+
+</details>
+
+### Checklist de higiene  [C6 §7]
+✓ Registrar **todos** los experimentos · ✓ features solo con datos hasta \(t\) (tampoco normalizar con medias del futuro) · ✓ purged CV con embargo ≥ ventana de etiqueta · ✓ **costos de transacción realistas** · ✓ el test final se toca **una vez**.
+
+→ que_cuenta_como_intento · purga · embargo · walk_forward (C5)
+
+<details><summary>más</summary>
+
+El backtest no es un experimento repetible: hay una historia, y cada vez que la mirás gastás
+un poco. El dataset de test es un recurso no renovable.
+Ej.: estandarizar las features con `StandardScaler().fit(X)` sobre todo el dataset antes
+de partir en train/test ya es leakage: la media incluye el futuro.
+
+</details>
+
+### La curva sesgo-varianza en finanzas  [C6 §7]
+Error de train siempre baja con la complejidad (memoriza); el de test baja y **vuelve a subir**. En finanzas el mínimo está **muy a la izquierda**: hay tan poca señal que ganan los modelos simples. DSR y PBO son la versión cuantificada de "a la derecha de este mínimo te estás mintiendo".
+
+→ ridge_lasso (C4) · shrinkage_ledoit_wolf (C5) · seis_modelos · curva_de_aprendizaje
+
+<details><summary>más</summary>
+
+El eje X puede ser complejidad del modelo (más árboles, más profundidad, más parámetros) o,
+para el DSR, cantidad de intentos. Es el tercer hilo del curso ⚡: un estimador un poco
+sesgado pero estable predice mejor que uno flexible y ruidoso.
+Ej.: por eso la logística es el baseline obligado y el RF con `min_samples_leaf` alto el
+default.
+
+</details>
+
+## §8 Herramientas de evaluación y cierre
+
+### AUC-ROC  [C6 §8]
+La curva ROC grafica, para cada umbral, **TPR** (= recall, fracción de los 1 reales detectados) contra **FPR** (fracción de los 0 reales marcados como 1). AUC = 1: perfecto; 0.5: moneda. **No depende del umbral ni del balance de clases** — en finanzas, AUC 0.6 ya es interesante.
+
+→ class_weight · precision_vs_recall · senal_ruido
+
+<details><summary>más</summary>
+
+Subir el umbral hace al modelo más conservador: menos 1 detectados, pero menos falsas
+alarmas; la curva traza ese trade-off. El AUC también se lee como la probabilidad de que el
+modelo le asigne más score a un 1 que a un 0 elegidos al azar. Por eso es preferible a
+accuracy cuando los eventos son raros (señales, fraude).
+Ej.: en las slides, logística y árbol profundo llegan los dos a AUC 0.75 con curvas de
+forma distinta: la logística mejora el recall de a poco, el árbol da un salto inicial.
+
+</details>
+
+### Curva de aprendizaje: ¿más datos o mejor modelo?  [C6 §8]
+Score de train y test contra el **tamaño del training set**, con el modelo fijo. Convergen arriba: bien. Convergen abajo: **underfitting** (más complejidad). Gap grande que no cierra: **overfitting estructural** (regularizar, simplificar). En finanzas casi siempre es el tercer caso.
+
+→ curva_sesgo_varianza · no_estacionariedad · seis_modelos
+
+<details><summary>más</summary>
+
+La curva sesgo-varianza varía la complejidad con los datos fijos; la de aprendizaje varía los
+datos con el modelo fijo. En finanzas el gap no cierra porque, con señal/ruido tan bajo, el
+modelo encuentra patrones espurios en cualquier muestra finita, y agregar más datos del
+pasado no ayuda: agregás otro régimen.
+Ej.: pasar de 5 a 20 años de historia no cierra el gap si esos 15 años extra son de un
+mercado distinto.
+
+</details>
+
+### El pipeline completo y lo que se llevan  [C6 §8]
+Dollar bars → triple barrera → unicidad + diferenciación fraccionaria → modelo → purged CV → MDI/MDA → DSR/PBO. **El rigor está en las puntas**, no en el modelo del medio. Siempre la métrica que no miente: **AUC sobre accuracy, MDA sobre MDI, DSR sobre Sharpe**.
+
+→ pipeline_lopez_de_prado · trabajo_integrador
+
+<details><summary>más</summary>
+
+Las siete ideas de cierre: (1) el pipeline estándar de DS aplicado a finanzas miente, y cada
+supuesto que viola es plata que perdés; (2) muestrear por actividad; (3) etiquetar como se
+opera, con barreras adaptadas a la vol; (4) la validación es lo más importante; (5) el modelo
+es lo de menos; (6) la métrica que no miente; (7) un DSR bajo es información, no mala suerte.
+Ej.: para el trabajo integrador, este pipeline es el esqueleto de cualquier parte "ML macro"
+de la Unidad 1.
+
+</details>
+
+## ❓ Dudas de C6
+
+*(Por completar después de repasar la clase.)*
+
+- ❓ DUDA: las slides de MDI/MDA y la "trampa de la sustitución" (33, 34, 42) no están en el
+  PDF. Confirmar con lo visto en clase.
+
+
+---
 
 # C7–C8 — Unidad 3 (HFT / baja latencia)
 
