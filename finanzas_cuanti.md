@@ -63,7 +63,8 @@ después. Si no podés resumir la clase en esas tres partes, no la entendiste to
 | C4 | Factores y series temporales (del mundo Q al mundo P) | ✅ armada |
 | C5 | Teoría de portafolio: Markowitz, Black-Litterman y Risk Parity | ✅ armada |
 | C6 | Machine Learning: el pipeline riguroso (López de Prado) | ✅ armada |
-| C7–C8 | Unidad 3 (HFT / baja latencia) | ⬜ pendiente |
+| C7 | Arbitraje estadístico: de la cointegración al filtro de Kalman | ✅ armada |
+| C8 | Unidad 3 (HFT / baja latencia) | ⬜ pendiente |
 | C9 | Wrap del curso + presentaciones (formato póster) | ⬜ pendiente |
 
 **Hilo conductor del curso:** casi todo el riesgo se lee como una **expansión de Taylor**.
@@ -3537,9 +3538,575 @@ de la Unidad 1.
   PDF. Confirmar con lo visto en clase.
 
 
+RL como una idea vana como logica. Se puede entrenar un modelo con la info de ayer y eso seria lo mismo que entrenarla con la de hoy.
+
+La primera parte define las estrategias de aquellos que no necesitan saber de finanzas, sino que basta usar lo que los otros usan para entrenar al modelo.
+
+P4 es interesantisima. Muestra los problemas estructural es que existen.
+
+Si alguien comparte su modelo, este deja de funcionar, por lo que el patron desaparece. Permite la creatividad y la independencia de modelos unicos. HOY VEREMOS EL RIGOR.
+"los modelos son lo de menos (un random forest alcanza); el rigor está en los datos, las etiquetas y la validación"
+
+2. Datos
+El mercado no genera la informacion a ritmo reloj. Casi no hay trades a la primer media hora y tampoco al mediodia, sesgo del tiempo. 
+Usar la actividad de movimiento para muestrear, una vela cada N operaciones o cada N acciones operadas. Dollar Bars como parametro, resulta mas medible.
+
+3. Etiquetas
+Meta labeling y doble barrera. Division de modelos en uno lazy y otro que opera una ves que despierta el primer modelo. Etiquetar es muy relevante, y esot implica 
+Combiancion de ambas y problematica de modelos que detectan mal la idea de cuando operar. Es importante introducirle peso.
+
+4. Pesos
+--
+
+5. validacion
+El k-fold miente con series financieras
+Purged K-fold y walk-forward con purging dependiendo de la situacion
+
+6. modelos -- Analisis de cada modelo, porque si, porque no. Cuando conviene y cuando no conviene utilizarlos.
+Seis candidatos, conviene elegir el que se entiende.
+
+Y si se puede modelar en dimensiones y correlacionar los activos como vectores en dimensiones. (Logica similar a la manera en la que trabajan las LLMs)  Consultar!!!!
+
+Deep Learning y le peligro de intentar entender lo inentendible.
+
+Modelar es recien lo ultimo tras la serie de los pasos 1-5
+
+7. 
+PBO es muy importante
+
 ---
 
-# C7–C8 — Unidad 3 (HFT / baja latencia)
+# C7 — Arbitraje estadístico: de la cointegración al filtro de Kalman
+
+## Idea general
+
+**En una frase.** El retorno de *una* acción no se deja predecir (C4 lo demostró con el
+fracaso del ARIMA), pero la *diferencia* entre dos activos hermanos sí: no se puede alejar
+para siempre porque hay una economía que la ancla. El stat arb cambia el objeto, no el método:
+cointegración encuentra el ancla, el proceso OU la cuantifica, Kalman la sigue cuando se mueve, y
+un checklist de rigor audita el backtest.
+
+**Qué problema del mercado resuelve.** Cómo ganar plata *sin apostar a hacia dónde va el
+mercado*: largo un activo, corto el otro en la proporción correcta (market neutral), y el P&L
+depende del spread, no del nivel. La pregunta técnica de todo desk de valor relativo es una sola:
+¿cómo sé que dos activos comparten de verdad un ancla de largo plazo y no es una coincidencia de
+la muestra? De ahí sale la clase: el test (cointegración), el modelo del spread (OU, half-life,
+s-score), el protocolo de pairs, su versión industrial (Avellaneda-Lee, cientos de residuos a la
+vez) y el hedge ratio variable (Kalman). Con dos advertencias que ocupan media clase: el riesgo
+de que el par se rompa, y el crowding (agosto 2007).
+
+**Cómo conecta.** Hacia atrás casi todo vuelve: la EMH y el ADF de C4 §4 (los precios son I(1), los
+spreads no); el AR(1) de Vasicek de C3 §5 como estimador del OU (y la varianza de Heston, también
+mean-reverting); PCA de C4 §6/C5 para construir los factores; Ledoit-Wolf de C5 como el problema del
+ruido en autovalores; Markowitz de C5 para el sizing; y de C6, las cuatro herramientas que
+"HOY vuelven una y otra vez": multiple testing/Bonferroni, leakage (acá como look-ahead al
+calibrar el hedge ratio), Deflated Sharpe/PBO y el adversario adaptativo (una señal publicada
+decae) ⚡. Tercer hilo: Kalman es Black-Litterman (C5) iterado en el tiempo, y EWMA/GARCH (C4) es
+Kalman con ganancia fija. Hacia adelante: el OU tiene todavía dos vidas en C8 (inventario de
+Avellaneda-Stoikov, y Almgren-Chriss) y el Kalman reaparece como el precio bayesiano de
+Glosten-Milgrom; la escala baja de días-semanas a milisegundos.
+
+> Arco de la clase — *Ancla → resorte → sistema → estado oculto.*
+> §1 predecir lo "predecible" (spreads, no precios) → §2 cointegración (regresión espuria,
+> ADF, Engle-Granger, Bonferroni, Johansen) → §3 el spread como OU (half-life, s-score, el reloj)
+> → §4 pairs trading (5 pasos, costos, par roto, agosto 2007) → §5 Avellaneda-Lee (industrial) →
+> §6 Kalman (β vivo) → checklist.
+
+## §1 Predecir lo "predecible"
+
+### El giro del stat arb: cambiar el objeto, no el método  [C7 §1]
+El retorno de una acción no se deja predecir (EMH). Lo que sí: que **dos activos hermanos no se separan**. El spread KO–PEP no depende de la Fed ni del ciclo, depende de que dos cocacoleras compiten en el mismo negocio: estructura *por construcción*. La EMH borra la señal en los precios; en los spreads la señal es la economía misma.
+
+→ EMH (C4) · ARIMA (C4) · market_neutral · valor_relativo
+
+<details><summary>más</summary>
+
+Es la paradoja de C4: ARIMA sobre un precio falla porque el precio es un random walk sin fuerza
+que lo traiga de vuelta. El giro no es un modelo mejor sino otro *objeto*: una combinación de
+precios que sí tiene esa fuerza. El plan: cointegración (el test) → OU (el modelo) → pairs
+(la implementación) → industrial → Kalman.
+Ej.: nadie sabe si KO sube mañana, pero si KO sube 5% y PEP no, el spread está estirado y se
+apuesta a que vuelva.
+
+</details>
+
+### Dos procesos, dos varianzas: random walk vs OU  [C7 §1]
+Precio: \(P_t=P_{t-1}+\varepsilon_t\) → \(\mathrm{Var}[P_{t+h}-P_t]=h\sigma^2\), **crece sin límite**. Spread mean-reverting: \(dS_t=\kappa(\theta-S_t)dt+\sigma dW_t\) → \(\lim_{h\to\infty}\mathrm{Var}[S_{t+h}-S_t]=\sigma^2/\kappa\), **satura**. Esa firma es la prueba de fuego.
+
+→ random_walk (C4) · OU · estacionariedad (C4) · half_life
+
+<details><summary>más</summary>
+
+Con la *misma* varianza de innovación por paso, el random walk se va a −80 y el OU oscila
+alrededor de un centro. Incertidumbre que satura = existe un techo a cuánto te podés equivocar
+mirando lejos = eso es lo que hace *operable* al spread. La varianza del incremento converge a
+\(2\cdot\sigma^2/(2\kappa)\) porque la distribución estacionaria tiene varianza \(\sigma^2/2\kappa\).
+Ej.: en la slide, la fórmula cerrada (roja) coincide con la simulación del OU.
+
+</details>
+
+### El resorte: analogía física  [C7 §1]
+El OU es un oscilador armónico amortiguado con ruido: \(m\ddot x+\gamma\dot x+kx=\xi(t)\) ↔ \(dS=\kappa(\theta-S)dt+\sigma dW\). **κ** = constante elástica (\(k/\gamma\), límite sobreamortiguado): más κ, resorte más duro, vuelve más rápido. **σ** = ruido térmico que lo sacude.
+
+→ OU · half_life · Heston (C3)
+
+<details><summary>más</summary>
+
+No es decoración: el half-life de §3 es, matemáticamente, un tiempo de relajación de física.
+Sin σ, el resorte se quedaría quieto en θ.
+Ej.: κ grande ↔ resorte duro ↔ half-life corto ↔ muchos cruces por año.
+
+</details>
+
+### Market neutral y la historia de Tartaglia  [C7 §1]
+Nunzio Tartaglia y su equipo de físicos/matemáticos en Morgan Stanley (~1985): el primer grupo quant de trading sistemático en un banco grande (de ahí salen D.E. Shaw y medio stat arb moderno). Principio vigente: **largo uno, corto el otro en la proporción correcta; el P&L depende del spread, no del nivel.**
+
+→ market_maker (C1) · beta (C1) · hedge_ratio
+
+<details><summary>más</summary>
+
+Aislás la apuesta idiosincrática del ruido de mercado. El zoológico de formas que toma la idea:
+pairs (2 activos, un β, un spread), stat arb industrial (N activos contra K factores, §5),
+merger arbitrage (spread entre la acción y la oferta de adquisición) y convertible arbitrage
+(bono convertible vs sus componentes replicados). Todas comparten un spread con ancla
+económica real que revierte a un equilibrio medible.
+
+</details>
+
+## §2 Cointegración: el fundamento estadístico
+
+### Regresión espuria  [C7 §2]
+Dos random walks generados **sin ninguna relación** y regresados entre sí dan \(R^2=0.83\) y \(t=70\). Con series no estacionarias (I(1)) los estadísticos clásicos no tienen su distribución habitual: la inferencia es basura (Granger-Newbold, 1974).
+
+→ estacionariedad (C4) · leakage (C6) · cointegracion · correlacion_vs_cointegracion
+
+<details><summary>más</summary>
+
+Dos series que "derivan" se parecen por accidente en cualquier muestra finita. Es el fraude
+estadístico que motiva toda la sección. Nobel 2003 para Granger, por el problema (regresión
+espuria) *y* la solución (cointegración).
+Ej.: dos caminatas independientes simuladas → un "descubrimiento" que en cualquier otro
+contexto sería publicable.
+
+</details>
+
+### Correlación ≠ cointegración  [C7 §2]
+**Cointegración:** \(X,Y\) son I(1) pero existe \(\beta\) tal que \(X-\beta Y\) es I(0). Correlación de *retornos* = se mueven juntas hoy (puede ser espuria o transitoria); cointegración de *niveles* = la diferencia no se escapa nunca. Son propiedades distintas y una no implica la otra.
+
+→ regresion_espuria · hedge_ratio · correlacion (C4)
+
+<details><summary>más</summary>
+
+Económicamente: hay un mecanismo de corrección que las devuelve al equilibrio.
+Ej.: en la slide, un par con retornos correlacionados 0.91 cuyo spread se aleja sin límite
+(no cointegra), contra otro par con retornos correlacionados sólo 0.77 cuyo spread queda
+acotado (sí cointegra). "El par que más se parece es el que falla."
+
+</details>
+
+### Raíces unitarias y test ADF  [C7 §2]
+\(X_t=\rho X_{t-1}+\varepsilon_t\): \(\rho=1\) random walk (I(1)), \(|\rho|<1\) estacionaria (I(0)). ADF: \(\Delta X_t=\gamma X_{t-1}+\sum\phi_i\Delta X_{t-i}+\varepsilon_t\), \(H_0:\gamma=0\) (hay raíz unitaria). Rechazar \(H_0\) (\(\gamma<0\) significativo) = la serie *sí* revierte.
+
+→ estacionariedad (C4 §4) · ADF_KPSS (C4) · engle_granger
+
+<details><summary>más</summary>
+
+Los rezagos \(\Delta X_{t-i}\) limpian autocorrelación residual para que el test sobre γ sea válido.
+Precios individuales: casi nunca se rechaza \(H_0\) (son I(1), consistente con EMH). El spread
+entre dos precios cointegrados: sí se rechaza. Ese contraste es todo el negocio.
+
+</details>
+
+### Engle-Granger: el test en dos pasos  [C7 §2]
+**Paso 1:** OLS de \(Y=\alpha+\beta X\) sobre *precios o log-precios* (no retornos). **Paso 2:** ADF sobre los residuos \(\varepsilon=Y-\alpha-\beta X\). Si son estacionarios → cointegradas: β es el hedge ratio y ε el spread.
+
+→ ADF · hedge_ratio · Johansen · multiple_testing
+
+<details><summary>más</summary>
+
+Detalles que muerden: (1) los valores críticos **no** son los del ADF común, porque β se estimó;
+(2) hay asimetría: regresar Y~X no da lo mismo que X~Y (OLS minimiza error vertical en un caso,
+horizontal en el otro) → la dirección se elige *antes* de testear con criterio económico (la más
+líquida como X), no probando las dos; (3) el fantasma de C6: testeando 100 pares ~5 cointegran
+por azar.
+Ej.: statsmodels `coint` ya trae los valores críticos correctos.
+
+</details>
+
+### Bonferroni: corregir cuando probás muchos pares  [C7 §2]
+Un test al 5% se equivoca 1 de cada 20 veces si no hay nada real. Con \(n\) pares: \(P(\text{al menos 1 falso positivo})=1-(1-\alpha)^n\). Con 12 pares ≈ **46%**. Bonferroni: exigir \(\alpha/n\) por test (0.05/12 ≈ 0.42%) → la chance *total* vuelve a ≈5%.
+
+→ multiple_testing (C6) · DSR_PBO (C6) · zoologico_de_factores (C4)
+
+<details><summary>más</summary>
+
+Es tirar 12 monedas cargadas en vez de una: cada una sola casi nunca sale cara, pero tirando 12
+juntas la chance de al menos una ya no es chica. Corregir por 5.000 tests exige evidencia mucho
+más fuerte por par que corregir por 12; de ahí que convenga filtrar por economía *antes* (§4).
+Ej.: la curva de la slide sube a ~87% con 40 pares.
+
+</details>
+
+### Look-ahead en cointegración  [C7 §2]
+Si estimás β sobre **toda** la muestra y después "backtesteás" en esa misma muestra, hiciste trampa sin darte cuenta. β se estima en una ventana de *entrenamiento* y el spread se evalúa sólo hacia adelante.
+
+→ leakage_temporal (C6) · purged_kfold (C6) · walk_forward (C5)
+
+<details><summary>más</summary>
+
+Es exactamente el leakage de C6, disfrazado de "calibrar el hedge ratio". La señal del par
+siempre se calcula con información que ya existía en ese día.
+
+</details>
+
+### Johansen y VECM: más de dos activos  [C7 §2]
+Con \(N>2\) puede haber varias relaciones de cointegración a la vez; Engle-Granger no dice cuántas ni cuáles. VECM: \(\Delta\mathbf Y_t=\alpha\beta^\top\mathbf Y_{t-1}+\sum\Gamma_i\Delta\mathbf Y_{t-i}+\varepsilon_t\); **β** = vectores de cointegración, **α** = velocidad de corrección de cada serie.
+
+→ Engle_Granger · PCA (C4) · avellaneda_lee
+
+<details><summary>más</summary>
+
+El test de traza testea secuencialmente rango(β) = 0, ≤1, ≤2… (`coint_johansen` de statsmodels).
+Con 3 activos y rango 1, hay *una* canasta estacionaria. Con 2 activos ambos tests coinciden;
+Johansen paga su complejidad extra recién con N≥3. En la clase se usa sobre todo EG:
+pairs es N=2, y Avellaneda-Lee resuelve N grande *de otra manera* (PCA).
+
+</details>
+
+## §3 El spread como proceso OU
+
+### OU y half-life: κ decide el negocio  [C7 §3]
+\(dS_t=\kappa(\theta-S_t)dt+\sigma dW_t\); \(t_{1/2}=\ln 2/\kappa\) (cuánto tarda una desviación en achicarse a la mitad). **Half-life corto (1–10 días):** muchas idas y vueltas por año, mucho P&L por unidad de capital. **Largo (meses):** capital inmovilizado, el spread es "verdad" pero no negocio. **< 1 día:** ya es microestructura, los costos se lo comen.
+
+→ Vasicek_CIR (C3) · Heston (C3) · resorte · costos
+
+<details><summary>más</summary>
+
+Es el mismo proceso que la varianza de Heston (C3) y que la tasa de Vasicek (C3 §5): cambia
+qué se le pone en \(S\). La parte no obvia es el "sweet spot": un spread puede ser
+estadísticamente perfecto y no ser negocio.
+Ej.: dos spreads con el mismo σ pero half-life 5 vs 60 días: el primero cruza el cero decenas de
+veces al año (cada cruce es un trade), el segundo deambula.
+
+</details>
+
+### s-score y reglas de trading  [C7 §3]
+\(s_t=(S_t-\mu_S)/\sigma_S\), un z-score con teoría atrás. **|s| > 2** entrar (s > 2: short el spread = vender Y, comprar βX; s < −2: long). **|s| < 0.5** cerrar. **|s| > 4** stop de emergencia: algo se rompió, es *otro régimen*.
+
+→ z_score · OU · multiple_testing (C6) · par_roto
+
+<details><summary>más</summary>
+
+Los umbrales son un trade-off frecuencia vs margen: umbral alto = pocos trades, bajo = muchos.
+Esperar el cero exacto regala poco y cuesta tiempo. Optimizarlos sobre la historia es multiple
+testing (C6): los canónicos (2, 0.5, 4) son un buen prior.
+
+</details>
+
+### De dónde salen μ_S y σ_S, y el atajo AR(1)  [C7 §3]
+La distribución estacionaria del OU es \(S_\infty\sim\mathcal N(\theta,\sigma^2/2\kappa)\), o sea \(\mu_S=\theta\), \(\sigma_S=\sigma/\sqrt{2\kappa}\). Un κ más alto no sólo revierte más rápido: **comprime la banda**. Estimación: el OU discretizado *es* un AR(1), \(S_t=a+bS_{t-1}+\text{ruido}\), con \(\kappa=-\ln b\), \(\theta=a/(1-b)\).
+
+→ Vasicek_AR1 (C3) · maxima_verosimilitud · OLS
+
+<details><summary>más</summary>
+
+Bajo ruido gaussiano, esa regresión simple ya es el estimador de máxima verosimilitud: no
+hace falta nada más sofisticado. Es el mismo atajo de la calibración de Vasicek de C3.
+Ej.: con \(b=0.95\) (diario), \(\kappa=-\ln 0.95\approx 0.051\) y half-life ≈ 13.5 días.
+
+</details>
+
+### El half-life depende del reloj  [C7 §3]
+El half-life **no es una propiedad fija del par**, es de *cómo lo muestreaste*. Un mismo OU con half-life real de 5 días, muestreado a 1 min / 5 min / 30 min / diario, da **cuatro half-lives distintos** con un AR(1). A alta frecuencia κ queda sobreestimado y el half-life **subestimado** (a 1 min, por más de 100×).
+
+→ bid_ask_bounce · microestructura · sesgo_varianza · costos
+
+<details><summary>más</summary>
+
+El rebote bid/ask es ruido sin autocorrelación propia y no escala con Δt: al achicar el
+intervalo domina cada vez más al incremento verdadero. Mete autocorrelación *negativa* espuria
+y el AR(1) la lee como reversión de más. Alargar el intervalo promedia sobre muchos rebotes y
+cura el sesgo, pero cuesta observaciones (error estándar más ancho): sesgo y varianza se mueven
+en direcciones opuestas según la frecuencia. Un holding period calibrado con un half-life
+intradiario sin corregir está calibrado *al bounce*: turnover, capacity y costos quedan
+optimistas por el mismo factor. La cura no es "elegir la frecuencia correcta", es correr varias
+y **reconciliar** intradiario vs diario.
+
+</details>
+
+### ¿Cointegra el mismo par a escala de segundos?  [C7 §3]
+Con libro de órdenes real a 1 segundo (90 min de apertura, 2026-08-06), **ninguno** de cuatro pares reales cointegra. El equilibrio del pairs trading vive en **días**, no en segundos. NVDA/SPY muestra un β de mercado estable (CAPM, C4), no una relación idiosincrática.
+
+→ CAPM (C4) · LOB (U2) · half_life_reloj
+
+<details><summary>más</summary>
+
+Adelanto de la Unidad 2/3: a escala de segundos manda la microestructura, no la economía. El
+bonus de la práctica repite esto con el par que elijas.
+
+</details>
+
+## §4 Pairs trading
+
+### Selección de candidatos: filtrar antes de testear  [C7 §4]
+Testear 5.000 pares al azar y corregir con Bonferroni es válido pero **desperdicia poder estadístico**. Filtros previos, en orden: (1) mismo sector/subsector (GICS) o mismo subyacente económico; (2) liquidez mínima en ambas patas; (3) capitalización/beta parecidos. Un universo de 5.000 baja a un puñado de candidatos **defendibles económicamente**.
+
+→ Bonferroni · GICS · liquidez · beta (C1)
+
+<details><summary>más</summary>
+
+Sin el filtro de capitalización, un gigante "arrastra" a un candidato chico por tamaño, no por
+negocio. Sin liquidez, los costos matan cualquier edge. Primero la economía, después el test:
+escanear 5.000 pares al azar es fabricar espurias.
+Ej.: KO/PEP (mismo negocio), GLD/GDX (mismo subyacente), EWA/EWC (misma economía).
+
+</details>
+
+### El protocolo de pairs en 5 pasos  [C7 §4]
+**1. Selección** (razón económica) → **2. Test** (Engle-Granger sobre precios, con corrección por cuántos pares probaste) → **3. Hedge ratio** (β de la regresión; spread = Y − βX) → **4. Calibración** (AR(1): κ, half-life, σ; ¿en el sweet spot 1–10 días? ¿a qué frecuencia?) → **5. Reglas** (s-score: entrada ±2, salida 0.5, stop 4, y **costos** antes de creer el Sharpe).
+
+→ Engle_Granger · OU · s_score · costos
+
+<details><summary>más</summary>
+
+Es la receta que la práctica va a aplicar. El orden importa: la economía antes que el
+p-value, y los costos antes que el Sharpe.
+
+</details>
+
+### El protocolo en números: Visa vs Mastercard  [C7 §4]
+Datos reales 2023–2026: \(\beta=1.06\), half-life ≈ **39 días** (bastante arriba del sweet spot), \(\sigma_{spread}\approx0.036\) en log-precio. Entrar en |spread| > 0.072, salir en < 0.018. P&L bruto esperado por trade ≈ 1.5σ ≈ 0.054, pocas veces por *año*. P&L neto real out-of-sample: **+0.018 en ~14 meses**, con 5 cruces de umbral en 3 años.
+
+→ half_life · costos · out_of_sample · leakage (C6)
+
+<details><summary>más</summary>
+
+Positivo, modesto, coherente con la cuenta: el trade-off frecuencia/calidad de §3 jugándose con
+datos reales. Los costos de acciones tan líquidas (pocos puntos básicos) son chicos frente a
+ese recorrido, pero son las *4 patas* (entrada y salida de cada lado). La ventana de
+calibración de β queda separada del tramo out-of-sample.
+
+</details>
+
+### Position sizing  [C7 §4]
+El error más común: igual capital a todos los pares. Un par con \(\sigma_{spread}\) grande mueve más P&L por unidad de capital que uno con \(\sigma_{spread}\) chico. El principio es el de Markowitz (C5) par a par: dimensionar por riesgo, no por capital.
+
+→ Markowitz (C5) · risk_parity (C5) · correlacion_residuos
+
+<details><summary>más</summary>
+
+Sin esto, el par más volátil domina el riesgo del portafolio sin que nadie lo haya decidido. Con
+muchos pares (§5) importa tanto la correlación *entre* residuos como la vol individual.
+
+</details>
+
+### Cuando el par se rompe  [C7 §4]
+La cointegración **no es una ley física**: es una relación institucional (mismo negocio, mismo regulador). Las instituciones cambian: fusiones, quiebras, disrupciones. El spread se va a s = 3… 4… 5 y el modelo dice "oportunidad histórica, doblá la apuesta". **Promediar un spread roto es la martingala del stat arb: la ruina con matemática linda.** Por eso el stop en |s| > 4 es un test de hipótesis en vivo.
+
+→ martingala · stop_loss · s_score · riesgo_de_modelo
+
+<details><summary>más</summary>
+
+Ej.: GM/Ford hacia 2008 (uno quebró), los pares de bancos en 2008, Kodak/Fuji.
+
+</details>
+
+### Agosto 2007: el quant meltdown  [C7 §4]
+Lunes 6 al jueves 9 de agosto de 2007. Docenas de fondos de stat arb corren señales muy parecidas; un fondo grande (apalancado, en aprietos por subprime) desarma posiciones → los spreads de *todos* se abren → se activan los stops de todos → más desarme: **espiral que se retroalimenta**. Pérdidas diarias de 10–20 desvíos estándar históricos; el viernes 10/8 reversión casi tan violenta como la caída, y el mes cierra casi neutro.
+
+→ crowding · VaR (C1) · liquidez · Khandani_Lo
+
+<details><summary>más</summary>
+
+Reconstrucción estilizada de Khandani & Lo (2007): la forma cualitativa (caída L–J, reversión V,
+mes casi neutro), no los números exactos. Después: stress-testing explícito de escenarios de
+"todos desarman a la vez", límites de apalancamiento más conservadores, más diversificación de
+*estilos* de señal. Lo que **no** cambió: el crowding es estructural (si la estrategia funciona,
+atrae capital), por eso episodios más chicos siguieron apareciendo: el riesgo se gestiona, no
+se elimina.
+
+</details>
+
+### Crowding: por qué todos vieron lo mismo  [C7 §4]
+Todos leen los mismos papers y entrenan con los mismos datos (C6) → miles de fondos construyen, sin coordinarse, **el mismo libro**. El crowding *es* un factor de riesgo: tu señal vale menos cuanta más gente la tiene, no sólo por decaimiento del edge sino por **riesgo de cola**.
+
+→ adversario_adaptativo (C6) · agosto_2007 · stop_loss
+
+<details><summary>más</summary>
+
+Un shock de liquidez ajeno puede mover *tu* spread sin que tu tesis haya cambiado. Defensa
+práctica (acota, no elimina): diversificar entre estilos de señal (no sólo entre pares), límites
+de apalancamiento, stress-test contra 2007. El stop de |s| > 4 también protege de esto: salir,
+no promediar.
+
+</details>
+
+## §5 Avellaneda-Lee (2010): el stat arb industrial
+
+### De pares artesanales a residuos industriales  [C7 §5]
+El pairs clásico es artesanal (un par curado a mano, no escala a 3.000 acciones). Avellaneda-Lee: cada acción contra *sus* factores, \(r_i=\beta_iF+\varepsilon_i\); el residuo acumulado \(X_i(t)=\sum_{s\le t}\varepsilon_i(s)\) es el "precio propio" de la acción, neto del sector. **Hipótesis: \(X_i\) es un OU** (lo idiosincrático revierte, lo sistemático no).
+
+→ factores (C4) · PCA (C4/C5) · OU · pairs
+
+<details><summary>más</summary>
+
+Mismo esqueleto que pairs, pero N activos contra K factores a la vez. La señal es el
+s-score del residuo: residuo caro → short la acción cubierta con el factor; barato → al revés,
+repetido sobre cientos de acciones.
+
+</details>
+
+### Construyendo F: PCA vs ETFs sectoriales  [C7 §5]
+**PCA** busca los patrones de movimiento conjunto más grandes: modo 1 = la "marea" (el mercado, todo sube y baja junto); modos 2, 3… = "corrientes" más chicas (grupos que se mueven juntos, ej. bancos, energéticas) sin etiquetas humanas. **ETFs sectoriales:** "financials" es siempre financials.
+
+→ PCA (C4 §6) · Fama_French (C4) · rebalanceo
+
+<details><summary>más</summary>
+
+Trade-off: PCA se adapta solo pero los modos 2, 3… **cambian de identidad** al re-estimar (el
+"modo 2" de este mes puede no ser el del mes que viene), lo que complica un sistema que
+rebalancea a diario; los ETFs son estables y auditables pero son una foto vieja de la economía.
+En la práctica se testean las dos y muchos sistemas combinan o eligen según el universo. El stat
+arb industrial tradea los modos/sectores *altos*: neutraliza el mercado (modo 1) y cosecha la
+reversión local.
+
+</details>
+
+### El sistema completo del paper y su decaimiento  [C7 §5]
+Universo ~1.400 acciones US, 15 factores PCA (o ETFs sectoriales, da parecido). Por acción: residuo acumulado → OU (AR(1)) → s-score. Cartera: **short residuos caros (s > 1.25), long baratos (s < −1.25)**, cientos de posiciones; **filtro clave: sólo half-life < 30 días**. Resultado: Sharpe ≈ **1.4** (1997–2007) y ≈ **0.9** post-2003.
+
+→ half_life · crowding · adversario_adaptativo (C6) · Sharpe (C5)
+
+<details><summary>más</summary>
+
+Sin el filtro de half-life terminás tradeando ruido lento disfrazado de señal (el mismo sesgo de
+§3). El decaimiento tiene causas con nombre y fecha: **crowding** (más capital persiguiendo la
+misma señal simple comprime el edge por trade), **costos** (decimalización y HFT achicaron el
+bid-ask pero también las ventanas de oportunidad) y el **adversario adaptativo** de C6: la
+señal publicada decae, "el paper es su propio obituario". La slide muestra sólo los dos promedios
+que el paper reporta, sin inventar serie año a año. Agosto 2007 aparece en sus propios datos como
+drawdown sincronizado.
+
+</details>
+
+### Extensiones modernas: Marchenko-Pastur y autoencoders  [C7 §5]
+El límite del PCA estándar: con N acciones y T observaciones finitas los autovalores chicos son ruido de muestreo (random matrix theory). **Marchenko-Pastur** da el techo de un autovalor si la matriz fuera puro ruido: todo autovalor por debajo se descarta. **Autoencoders:** red que comprime a pocas variables y reconstruye; permiten relaciones no lineales (PCA sólo lineales).
+
+→ Ledoit_Wolf (C5) · PCA · autoencoder (ML) · shrinkage
+
+<details><summary>más</summary>
+
+Es el mismo problema que motivó Ledoit-Wolf en C5: la covarianza muestral cruda no alcanza. El
+esqueleto (residuo → OU → s-score) sobrevive intacto: sólo cambia *cómo* se construye F.
+
+</details>
+
+### Pairs artesanal vs industrial: la lección de arquitectura  [C7 §5]
+**Pairs:** 1 apuesta, señal fuerte pero rara (necesita historia/negocio real), capacidad chica. **Avellaneda-Lee:** miles de apuestas, señal débil e individual, capacidad grande por diversificación. *Señal simple + universo enorme + disciplina de riesgo > señal genial en un activo.* El costo: infraestructura para correr miles de OUs y rebalancear a diario.
+
+→ capacity · diversificacion · ley_fundamental (Grinold)
+
+<details><summary>más</summary>
+
+Por eso el segundo enfoque gana en la práctica moderna.
+
+</details>
+
+## §6 Kalman: perseguir el estado oculto
+
+### El problema: β es un estado oculto  [C7 §6]
+Todo lo anterior asumió β constante, y no lo es (mix de negocio, apalancamiento, regímenes). El parche, **OLS rolling** de N días, promedia el pasado con peso uniforme: tras un cambio de régimen arrastra N/2 días de mundo viejo, siempre llega tarde, y achicar N no es gratis (más ruido). Replanteo: \(y_t=\beta_t x_t+\varepsilon_t\) (observación) y \(\beta_t=\beta_{t-1}+\eta_t\), \(\eta_t\sim\mathcal N(0,Q)\) (estado oculto).
+
+→ OLS_rolling · hedge_ratio · estado_oculto · sesgo_varianza
+
+<details><summary>más</summary>
+
+Tres capas: **oculta** (\(\beta_t\), existe pero no tiene ticker), **observable** (\(y_t\)
+retorno del activo, \(x_t\) retorno del mercado) e **inferencia** (pasar de lo visto a lo no
+visto). La observación de β es *indirecta*: está multiplicada por \(x_t\) y enterrada en ruido.
+Si \(x_t\approx0\) (mercado plano) \(y_t\) no dice nada útil sobre β; si \(x_t\) es grande,
+\(y_t/x_t\approx\beta_t\) pero ruidoso: el mercado es la "lupa". Es el mismo filtro del GPS del
+teléfono y la navegación del Apollo.
+
+</details>
+
+### El ciclo de Kalman: predecir, comparar, actualizar  [C7 §6]
+**Predict:** \(\hat\beta_{t|t-1}=\hat\beta_{t-1}\), \(P_{t|t-1}=P_{t-1}+Q\) (sin dato nuevo la incertidumbre sólo crece). **Comparar:** innovación \(e_t=y_t-\hat\beta_{t-1}x_t\). **Actualizar:** \(\hat\beta_t=\hat\beta_{t-1}+K_te_t\), con \(K_t=\dfrac{Px_t}{x_t^2P+R}\). **K es el dial de confianza entre modelo y dato.**
+
+→ Black_Litterman (C5) · EWMA_GARCH (C4) · Bayes · Glosten_Milgrom (C8)
+
+<details><summary>más</summary>
+
+Con \(x_t\approx1\): \(K\approx P/(P+R)\), un cociente de incertidumbres. **P ≫ R:** confío poco en
+mi estimación, el dato es limpio → K→1, le creo al dato. **R ≫ P:** el dato es ruidoso, confío en
+lo que ya sé → K→0, casi ignoro el dato de hoy. \(x_t\) entra en K por la misma razón que antes:
+filtra cuánta señal trae \(y_t\) sobre β. Parientes: es **Black-Litterman iterado en el tiempo**
+(equilibrio previo + views → posterior), y EWMA/GARCH (C4) es Kalman con ganancia fija.
+Ej.: si el β verdadero salta de 1.0 a 1.6, el OLS de 120 días tarda ~60 días en absorberlo; el
+Kalman dobla en ~20, pagando algo de ruido en régimen estable (ése es el dial Q).
+
+</details>
+
+### Kalman persigue, no arregla: EWY vs EWT  [C7 §6]
+Todo asumió que el par *sigue existiendo*, sólo que β se mueve. Si el equilibrio deja de existir, el filtro no lo sabe: sigue prediciendo/actualizando sobre un estado que ya no converge a nada. Caso real: EWY (Corea) vs EWT (Taiwán), 2000–2003: cointegran fuerte jul-2000/may-2001 (64% de las ventanas rolling con p<0.05) y después no (8%).
+
+→ par_roto · p_value_rolling · leakage (C6) · stop_loss
+
+<details><summary>más</summary>
+
+La señal de alarma **no es un p-value puntual**, es que el p-value *cruza* el umbral y se queda
+arriba sin volver. Si el estado deambula sin converger tras el warm-up, el filtro persigue un
+equilibrio que no existe. Mismo síntoma que el CV que miente de C6: el número se ve razonable
+en cualquier corte, pero no hay ancla estable detrás.
+
+</details>
+
+### Capacidad y costos: por qué el stat arb "fácil" murió  [C7 §6]
+El stat arb fácil murió hacia 2002–2007: **crowding** (todos con las mismas señales, spreads arbitrados al hueso), **costos** (half-lives cortos = rotación alta = el bid-ask se come edges finos) y **decimalización + HFT** (el rol de "proveedor de convergencia" se profesionalizó). Hoy vive en horizontes más cortos (intradía), universos menos arbitrados (futuros, FX, crypto, bonos emergentes) y señales no lineales sobre el mismo esqueleto (ML de C6, *con* su higiene).
+
+→ microestructura (C8) · crowding · ML (C6)
+
+<details><summary>más</summary>
+
+Cierra el arco de la clase: la señal de C7 es real pero se agota cuando se difunde.
+
+</details>
+
+## §7 Cierre: el checklist antes de creer un backtest
+
+### La clase en una frase y el checklist  [C7 §7]
+**Cointegración encuentra el ancla, OU la cuantifica, Kalman la sigue, el checklist la audita.** Antes de creer cualquier backtest de pares o de Avellaneda-Lee: (1) ¿cuántos pares/residuos probaste? → Bonferroni; (2) ¿los umbrales del s-score están optimizados sobre la *misma* historia que los reporta? → overfitting; (3) ¿incluye costos de las 4 patas y el escenario de par roto?; (4) ¿a qué frecuencia calibraste el half-life y reconciliaste contra otra?
+
+→ DSR_PBO (C6) · multiple_testing (C6) · trabajo_integrador
+
+<details><summary>más</summary>
+
+Es C6 aplicado: el checklist son las herramientas de rigor de López de Prado con nombre de
+stat arb. Para el trabajo integrador, este esqueleto (ancla → OU → señal → auditoría) es una
+candidata natural a parte de la Unidad 2.
+Adelanto de C8: al OU le quedan dos vidas más (Almgren-Chriss para ejecución óptima y el
+inventario de Avellaneda-Stoikov para market making); "el otro Avellaneda": hoy Lee (stat arb),
+la próxima Stoikov (market making). Y el Kalman de hoy reaparece como el precio bayesiano del
+spread bid-ask de Glosten-Milgrom. Se baja de escala: de días-semanas a ms y μs.
+
+</details>
+
+## ❓ Dudas de C7
+
+*(Por completar después de repasar la clase.)*
+
+- ❓ DUDA: la slide 48 habla de un "Kalman 2D" (nivel de equilibrio \(\alpha_t\) además de \(\beta_t\)) para EWY/EWT, pero
+  las slides sólo desarrollan el Kalman 1D con \(x_t\) = retorno de mercado. Confirmar con lo
+  visto en clase cómo se plantea el 2D.
+- ❓ DUDA: en el protocolo el sweet spot es half-life 1–10 días, pero el par de ejemplo (V/MA)
+  tiene 39 días y se lo usa igual como caso didáctico. ¿Se descarta en la práctica o se acepta
+  con menos rotación?
+- ❓ DUDA: Bonferroni es conservador (asume tests independientes). ¿Se vio alguna alternativa
+  (Benjamini-Hochberg / FDR) para muchos pares? No aparece en las slides.
+
+---
+
+# C8 — Unidad 3 (HFT / baja latencia)
 
 ## Idea general
 
