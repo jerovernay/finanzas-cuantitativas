@@ -64,8 +64,9 @@ después. Si no podés resumir la clase en esas tres partes, no la entendiste to
 | C5 | Teoría de portafolio: Markowitz, Black-Litterman y Risk Parity | ✅ armada |
 | C6 | Machine Learning: el pipeline riguroso (López de Prado) | ✅ armada |
 | C7 | Arbitraje estadístico: de la cointegración al filtro de Kalman | ✅ armada |
-| C8 | Unidad 3 (HFT / baja latencia) | ⬜ pendiente |
-| C9 | Wrap del curso + presentaciones (formato póster) | ⬜ pendiente |
+| C8 | Microestructura y HFT: del libro de órdenes al microsegundo (+ cierre y metodología) | ✅ armada |
+
+*(La última fecha de cursada es la presentación de pósters del integrador: no tiene teórico.)*
 
 **Hilo conductor del curso:** casi todo el riesgo se lee como una **expansión de Taylor**.
 Primera derivada (sensibilidad) y segunda derivada (curvatura) reaparecen con otro nombre
@@ -83,6 +84,15 @@ hacia el equilibrio de mercado (C5). Siempre el mismo trade-off sesgo/varianza: 
 poco sesgado pero estable predice mejor que uno "perfecto" pero ruidoso. En C6 el hilo se vuelve
 regla de diseño: L1 en la logística, `min_samples_leaf`, dropout; y en finanzas el mínimo del error
 de test está *muy* a la izquierda — modelos simples ganan. ⚡
+
+**Cuarto hilo (cierre, C8): el resorte OU y el precio bayesiano.** La misma reversión a la media
+\(dX=\kappa(\theta-X)dt+\sigma dW\) tiene seis vidas: nace en C2, vuelve dos veces en C3 (varianza de
+Heston, tasa de Vasicek), es el spread cointegrado de C7 y en C8 aparece dos veces más (la urgencia κ de
+Almgren-Chriss y el inventario de Avellaneda-Stoikov; también el decaimiento de Hawkes). En paralelo,
+el precio como **estimador bayesiano recursivo**: Black-Litterman (C5) → Kalman (C7) → Glosten-Milgrom
+y Kyle (C8) son la misma proyección normal "prior + evidencia". El curso entero es un mismo lenguaje
+(control estocástico, inferencia bayesiana, el resorte) en escalas cada vez más chicas: años → días →
+microsegundos. ⚡
 
 ---
 
@@ -4106,20 +4116,495 @@ spread bid-ask de Glosten-Milgrom. Se baja de escala: de días-semanas a ms y μ
 
 ---
 
-# C8 — Unidad 3 (HFT / baja latencia)
+# C8 — Microestructura y HFT: del libro de órdenes al microsegundo
 
 ## Idea general
 
-⬜ Por completar al cursar. Hipótesis: a escala de milisegundos el "precio" deja de ser un
-número y pasa a ser un **libro de órdenes** (LOB); el market maker de C1 vuelve como
-protagonista (Avellaneda-Stoikov), la ejecución de una orden grande es un problema de
-optimización (Almgren-Chriss), y la tecnología (FIX, C++ lock-free) y la regulación
-(spoofing, MiFID II) son parte del modelo, no un detalle.
+**En una frase.** El "precio" que usamos durante siete clases era un resumen: haciendo zoom no
+hay un precio sino un **libro de órdenes**, y el precio se mueve solo cuando alguien cruza el
+spread. De ahí salen el costo de operar (el spread y el impacto), cómo ejecutar una orden grande
+(Almgren-Chriss), cómo hacer market making sin morir de inventario (Avellaneda-Stoikov), y por qué
+existe la carrera por el microsegundo.
 
-# C9 — Wrap + presentaciones (póster)
+**Qué problema del mercado resuelve.** Todo quant ejecuta, aunque no haga HFT: los costos por pata
+que exigía el checklist de C6 y C7 salen *de acá*. La clase responde tres preguntas de desk: ¿de
+dónde sale el spread que pago? (Stoll, Glosten-Milgrom, Kyle), ¿cuánto me cuesta mover un bloque
+grande y a qué ritmo conviene hacerlo? (la ley de la raíz cuadrada, Almgren-Chriss, VWAP/TWAP/POV),
+y ¿cómo cotizo como market maker? (Avellaneda-Stoikov). Cierra con HFT (latencia, OFI, Hawkes),
+las catástrofes (Flash Crash, Knight) y un protocolo de 8 pasos para llevar una estrategia de la
+hipótesis al capital real.
 
-## Idea general
+**Cómo conecta.** Hacia atrás vuelve todo: el market maker y el PFOF de C1 son ahora protagonistas;
+el straddle y Black-Scholes de C2 valúan la "opción gratis" del arbitraje de latencia; el Heston de
+C3 es el σ estocástico que le falta a Avellaneda-Stoikov; Markowitz (C5) reaparece "en el tiempo"
+como Almgren-Chriss; las dollar bars y el checklist de C6 eran microestructura sin nombrarla; y el
+Kalman de C7 es el precio bayesiano de Glosten-Milgrom/Kyle. El resorte OU cierra sus seis vidas
+(cuarto hilo) ⚡. No hay "hacia adelante": la clase cierra el curso con el mapa completo y la
+metodología que debe seguir el trabajo integrador.
 
-⬜ Por completar al cursar. El cierre: las tres unidades son la misma pregunta (cómo se le
-pone precio al riesgo) a tres escalas de tiempo distintas — años, horas, milisegundos — y el
-trabajo integrador tiene que mostrar ese hilo sobre datos reales.
+> Arco de la clase — *Libro → spread → impacto → market making → velocidad → método.*
+> §1 el LOB (órdenes, FIFO, fragmentación, NBBO) → §2 tres teorías del spread → §3 impacto y
+> ejecución óptima → §4 Avellaneda-Stoikov → §5 HFT (latencia, OFI, Hawkes, C++, Flash Crash,
+> regulación) → §6 cierre del curso y protocolo de 8 pasos.
+
+## §1 El libro de órdenes: la máquina que hace los precios
+
+### El salto de escala: el precio era un resumen  [C8 §1]
+Al hacer zoom no hay un precio: hay un **bid**, un **ask** y un libro entero de intenciones a cada lado. El precio no "se mueve", **alguien cruza el spread** y consume órdenes de otros. El tiempo es discreto y por eventos (llegan, se cancelan, se ejecutan).
+
+→ dollar_bars (C6) · vol_realizada (C4) · costos_de_ejecución
+
+<details><summary>más</summary>
+
+Por qué le importa a cualquier quant, haga o no HFT: los costos por pata del backtest (C6, C7)
+salen de acá, y el ruido que contaminaba la volatilidad realizada a alta frecuencia, que las
+dollar bars de C6 corregían, es ruido de microestructura (el rebote bid-ask).
+Ej.: las dollar bars de C6 ya eran esto, muestrear por eventos y no por reloj.
+
+</details>
+
+### Orden límite vs orden de mercado  [C8 §1]
+**Límite**: precio garantizado, ejecución no; se sienta en el libro y **provee** liquidez. **Mercado**: ejecución garantizada, precio no; cruza el spread y **demanda** liquidez, paga la urgencia. Spread \(=\) ask \(-\) bid (el precio de la inmediatez); mid \(=(\text{bid}+\text{ask})/2\), una ficción útil.
+
+→ market_maker (C1) · spread · bid_ask (C6)
+
+<details><summary>más</summary>
+
+Variantes sobre las dos primitivas: **stop** (se vuelve orden de mercado al tocar un nivel;
+protección o breakout), **iceberg** (muestra solo una fracción del tamaño real), **IOC/FOK**
+(ejecutar ya lo que se pueda, o todo o nada, y cancelar el resto, para no dejar huella).
+Ej.: "compro hasta 100.00, ni un centavo más" es límite; "compro YA al precio que haya" es de mercado.
+
+</details>
+
+### Matching engine: FIFO vs pro-rata  [C8 §1]
+Casi todos los mercados usan **prioridad precio-tiempo (FIFO)**: mejor precio primero; a igual precio, el que llegó antes. Consecuencia: **la posición en la cola es un activo**. La alternativa **pro-rata** (algunos futuros y opciones) reparte el fill proporcional al tamaño: premia órdenes grandes, no velocidad.
+
+→ latencia · diseño_de_mercado · HFT
+
+<details><summary>más</summary>
+
+La regla de matching cambia las estrategias óptimas: el diseño de mercado moldea el comportamiento
+de todos. Es la motivación económica exacta de la carrera de latencia (§5).
+Ej.: bid en 99.98 con la cola A(200), B(150), C(400); llega una venta a mercado de 300. FIFO: A
+completo, B 100 de 150, C nada. Si A llegaba 1 ms después que B, se invierte. Con órdenes de
+100/300/600, pro-rata reparte 10/30/60% de cada fill.
+
+</details>
+
+### Fragmentación y NBBO  [C8 §1]
+En USA la misma acción cotiza en ~16 exchanges + ~30 dark pools. El **NBBO** (National Best Bid and Offer) es el mejor bid y el mejor ask de *todos* los venues; lo consolida y publica el **SIP**, con demora. Los **feeds directos** de cada exchange llegan antes: esa brecha de microsegundos es el negocio del arbitraje de latencia.
+
+→ arbitraje_de_latencia · dark_pools · HFT
+
+<details><summary>más</summary>
+
+La fragmentación es deliberada: varios venues compitiendo le quita poder de mercado a cada uno; el
+costo es la complejidad. El NBBO puede tener un spread que ningún venue ofrece por sí solo.
+Ej.: en la slide, el mejor bid está en BATS y el mejor ask en IEX.
+
+</details>
+
+### Dark pools e internalización  [C8 §1]
+No todo el flujo llega al libro público. **Internalización**: el bróker o un wholesaler (Citadel Securities) ejecuta tu orden sin mandarla a un exchange, a precio \(\ge\) NBBO. **Dark pools**: libros sin cotizaciones visibles que matchean al mid (~15% del volumen US); ocultan intención pero le restan volumen a la formación de precios.
+
+→ PFOF (C1) · NBBO · selección_adversa
+
+<details><summary>más</summary>
+
+Es la otra cara del payment for order flow de C1: al wholesaler le conviene el flujo retail porque
+es poco informado (noise, §2). Ver el NBBO antes que otros también cuesta: el retail usa el SIP,
+los HFT pagan feeds directos.
+
+</details>
+
+## §2 ¿De dónde sale el spread? Tres teorías
+
+### El elenco: informados, noise y market maker  [C8 §2]
+**Informado**: sabe algo de V que el mercado no; fracciona para no delatarse. **Noise**: opera por razones ajenas al precio (rebalanceos, liquidez). **Market maker**: cotiza ambos lados sin saber quién le habla e infiere del flujo. **Sin noise traders no hay mercado**: si toda orden fuera informada, el MM perdería siempre y dejaría de cotizar.
+
+→ Glosten_Milgrom · Kyle · Flash_Crash
+
+<details><summary>más</summary>
+
+La liquidez no es un número, es un **equilibrio frágil** entre tipos de traders. Cuando el MM cree
+que el flujo es tóxico, se retira, y es justo lo que pasó en el Flash Crash (§5).
+
+</details>
+
+### Stoll (1978): el spread por inventario  [C8 §2]
+Cada fill deja al MM con inventario que no eligió, expuesto a σ; **el spread compensa ese riesgo**. Predice: el spread crece con σ y se angosta cuando el MM descarga posición.
+
+→ Avellaneda_Stoikov · riesgo_de_inventario
+
+<details><summary>más</summary>
+
+Avellaneda-Stoikov (§4) resuelve en forma óptima exactamente este problema: el primer término de
+su spread es Stoll formalizado.
+
+</details>
+
+### Glosten-Milgrom (1985): el spread como seguro contra el que sabe  [C8 §2]
+Con una fracción μ de informados, **que te compren ES información**: el MM fija Ask \(=E[V\mid\text{compra}]>E[V]>E[V\mid\text{venta}]=\) Bid. El spread nace de Bayes, y el precio converge a V trade a trade.
+
+→ Kalman (C7) · Bayes · selección_adversa ⚡
+
+<details><summary>más</summary>
+
+Es el Kalman de C7 hecho mercado: cada trade es una observación ruidosa que actualiza el estimador
+del valor. Predice: el spread se **ensancha antes de anuncios** (earnings, Fed), cuando el μ
+efectivo es mayor.
+
+</details>
+
+### Kyle (1985): λ, el precio de mover el mercado  [C8 §2]
+El MM ve solo el flujo total \(y=x+u\) (informado + ruido) y fija \(p=\mu_0+\lambda y\), con \(\lambda=\sigma_V/(2\sigma_u)\). El informado dosifica cuánto opera y revela **exactamente la mitad** de su información. λ es la versión micro del impacto (§3): más incertidumbre del valor, más impacto; más noise, menos.
+
+→ market_impact · OFI · Black_Litterman (C5) ⚡
+
+<details><summary>más</summary>
+
+Derivación en tres pasos. (1) El informado maximiza \(\pi=(V-\mu_0)x-\lambda x^2\) y le da
+\(x^*=(V-\mu_0)/(2\lambda)\). (2) El MM proyecta: \(p=E[V\mid y]=\mu_0+\frac{\beta\sigma_V^2}{\beta^2\sigma_V^2+\sigma_u^2}\,y\),
+donde β es su *conjetura* de cuánto opera el informado, la misma proyección normal que Kalman y
+Black-Litterman. (3) Punto fijo: la conjetura tiene que coincidir con lo que el informado elige
+(\(\beta=1/(2\lambda)\)), y de ahí sale \(\lambda=\sigma_V/(2\sigma_u)\). Cada jugador optimiza dado lo
+que espera del otro, y el equilibrio es donde esa expectativa se confirma sola.
+Predice: el impacto es proporcional al **flujo**, no al tiempo transcurrido.
+
+</details>
+
+### Las tres suman, no compiten  [C8 §2]
+Descomposición empírica (Madhavan-Richardson-Roomans 1997) en una acción líquida típica: **~50% selección adversa + ~35% inventario + ~15% procesamiento** (costos fijos). Se distinguen porque cada componente deja una firma distinta en la autocovarianza de trades y quotes.
+
+→ Stoll · Glosten_Milgrom · Kyle
+
+<details><summary>más</summary>
+
+Cada teoría predice algo distinto (con σ, antes de anuncios, con el flujo), y eso es lo que
+permite separarlas con datos.
+
+</details>
+
+## §3 Market impact y ejecución óptima
+
+### La ley de la raíz cuadrada  [C8 §3]
+\(\Delta p\approx Y\sigma\sqrt{Q/V}\) (Q tu orden, V el volumen diario, \(Y\sim0.5\text{–}1\)). **No sale de ningún modelo**: es un ajuste empírico a ejecuciones reales. El impacto crece con la raíz del tamaño, no lineal. Se cumple en acciones, futuros, FX, crypto y opciones, con el mismo exponente ~0.5.
+
+→ Kyle · Almgren_Chriss · capacidad (C7)
+
+<details><summary>más</summary>
+
+No es obvia: Kyle predice impacto **lineal**, y la raíz sigue siendo un puzzle teórico abierto.
+Consecuencia de negocio: **la capacidad de toda estrategia es finita**.
+Ej. con datos reales (slide 18), dos fracasos instructivos: caminar el libro visible da b≈0.85
+(comerse el libro de una vez no es una metaorden en el tiempo), y los trades grandes sueltos de AAPL
+no revierten en 40 s (el impacto es casi todo permanente). La ley **sí** aparece con el proxy
+correcto (trades consecutivos del mismo lado como metaorden) y la normalización de Tóth et al. 2011
+(Q/V_día, impacto sobre la vol propia): los 6 tickers colapsan en una curva con b≈0.53.
+
+</details>
+
+### Impacto temporario vs permanente  [C8 §3]
+**Temporario**: el precio vuelve (parcialmente) al dejar de operar, porque consumiste liquidez que se repone; es un **costo puro** y evitable con la velocidad correcta. **Permanente**: queda, porque tu orden **reveló información** (Kyle); refleja el cambio de valoración, no es "culpa" de tu ejecución.
+
+→ Kyle · Almgren_Chriss
+
+<details><summary>más</summary>
+
+Almgren-Chriss modela el temporario proporcional a la velocidad de ejecución; ese es el término
+que la trayectoria óptima puede reducir.
+
+</details>
+
+### Almgren-Chriss: Markowitz en el tiempo  [C8 §3]
+Vender X acciones en T: \(\min_{x(t)} E[\text{costo}]+\gamma\,\mathrm{Var}[\text{costo}]\). **Rápido** = mucho impacto, poco riesgo; **lento** = poco impacto, mucha exposición a σ. Solución (impacto lineal): \(x(t)=X\,\frac{\sinh(\kappa(T-t))}{\sinh(\kappa T)}\), con \(\kappa\propto\sqrt{\gamma\sigma^2/\eta}\) (η = coeficiente de impacto temporario).
+
+→ Markowitz (C5) · frontera_eficiente (C5) · OU (C7) · TWAP ⚡
+
+<details><summary>más</summary>
+
+γ→0: ejecución **lineal** (el TWAP). γ grande: **front-loaded**, sacarse el riesgo de encima
+pagando impacto. κ es el "urgency parameter", la quinta vida del resorte. Cada γ es un punto
+(riesgo, costo esperado) de la **frontera de ejecución**, gemela de la de Markowitz: ningún
+cronograma la mejora en las dos dimensiones, se *elige* un punto.
+Ej.: vender 1M de acciones en un día (σ diaria 2%, participación 10%). Fondo paciente: κ≈0.5/día,
+trayectoria casi lineal. Urgente: κ≈4/día, el 60% se ejecuta en el primer cuarto del día.
+
+</details>
+
+### El menú: TWAP, VWAP, POV, Implementation Shortfall  [C8 §3]
+**TWAP**: ritmo constante (el γ→0 de A-C). **VWAP**: sigue el perfil de volumen intradiario **en U** (mucho a la apertura y al cierre, valle al mediodía). **POV**: una fracción fija del volumen en vivo (ej. 20%). **Implementation Shortfall**: A-C aplicado, medir todo contra el precio de decisión; es el estándar institucional.
+
+→ Almgren_Chriss · Flash_Crash · costos_de_ejecución
+
+<details><summary>más</summary>
+
+TWAP, VWAP y POV son reglas fijas que no resuelven ningún trade-off explícito; solo A-C balancea
+impacto vs riesgo con un γ elegido. El VWAP no está en la frontera, pero es **robusto**: funciona
+casi cualquier día sin estimar σ, γ ni κ. El POV se adapta solo, pero tarda si el mercado está
+tranquilo y **acelera si el volumen sube**, que es el feedback del Flash Crash (§5).
+Ej.: si el mercado hace históricamente el 8% del volumen en la primera hora, el VWAP ejecuta ~8% de
+la orden ahí.
+
+</details>
+
+## §4 Avellaneda-Stoikov: el market making óptimo
+
+### El problema del market maker  [C8 §4]
+Cotizar bid y ask y cobrar el spread en cada ida y vuelta, **sin morir de inventario**. El mercado decide cuándo te pega, y te pega cuando le conviene. Setup (A-S 2008): mid browniano sin drift (el MM no predice, **administra**); controles \(\delta^b,\delta^a\) (distancias al mid); intensidad de fills \(A e^{-k\delta}\); maximizar la utilidad exponencial de la riqueza final (aversión γ).
+
+→ Stoll · control_estocástico · HJB
+
+<details><summary>más</summary>
+
+Es control estocástico: se resuelve con la ecuación **HJB** (Hamilton-Jacobi-Bellman). Estado:
+s (mid), x (cash), q (inventario), t (tiempo al cierre). El truco: con utilidad exponencial el
+problema no depende de la riqueza ya acumulada, y el ansatz \(u=-e^{-\gamma x}w(s,q,t)\) baja la EDP
+de 4 a 3 variables. Bid y ask se maximizan por separado (uno es el espejo del otro: q+1 vs q−1).
+
+</details>
+
+### Precio de reserva y spread óptimo  [C8 §4]
+**Reserva**: \(r=S-q\gamma\sigma^2(T-t)\): tu centro no es el mid; comprado (q>0) → el centro baja para **atraer ventas**. **Spread**: \(\delta^a+\delta^b=\gamma\sigma^2(T-t)+\frac{2}{\gamma}\ln\!\left(1+\frac{\gamma}{k}\right)\). Quotes **simétricas alrededor de r, asimétricas alrededor del mid**: esa asimetría *es* la gestión de inventario.
+
+→ OU (C7) · Stoll · inventario ⚡
+
+<details><summary>más</summary>
+
+Primer término del spread: prima por riesgo de inventario (Stoll formalizado). Segundo: cuánto
+podés cobrar según cuán sensible es el flujo (k), el poder de mercado. El MM "inclina la cancha"
+para que el flujo lo devuelva a q=0: el inventario oscila alrededor de cero como un resorte (sexta
+vida del OU).
+Ej. (Monte Carlo, 500 paths): A-S le gana al MM ingenuo **no por cobrar más, sino por explotar
+menos**.
+
+</details>
+
+### Qué mueve qué: el mapa de parámetros  [C8 §4]
+γ↑ → spread más ancho, inventario más cerca de cero. σ↑ → ambas fórmulas reaccionan más fuerte. k↑ → el mercado castiga cotizar lejos, spread más angosto. T−t↓ → el término de inventario se apaga y solo queda el poder de mercado.
+
+→ Avellaneda_Stoikov · calibración
+
+<details><summary>más</summary>
+
+Cada parámetro tiene un rol económico legible: nada es una caja negra ajustada por prueba y error.
+Calibración en vivo, cada pocos segundos: σ rolling sobre los últimos 5–15 min del mid; A y k por
+regresión log-lineal de la intensidad de fills contra la distancia; γ es el dial de la casa
+(\(\in[0.01,1]\)); T es el fin del día o un horizonte rodante. "El modelo es el esqueleto, la
+calibración es el músculo".
+
+</details>
+
+### Límites y extensiones de A-S  [C8 §4]
+Lo que le falta al esqueleto: σ constante (→ Heston, C3), fills Poisson (→ Hawkes, §5), sin señal de flujo, un solo activo, inventario sin tope. Extensiones: **γ creciente con |q|** (límite duro barato), **Cartea-Jaimungal (2015)** (señal de order flow en el precio de reserva y retiro de quotes ante flujo tóxico), **Guéant-Lehalle-Fernandez-Tapia (2013)** (multi-activo con \(Q_{\max}\) duro).
+
+→ Heston (C3) · Hawkes · OFI · selección_adversa
+
+<details><summary>más</summary>
+
+En producción un desk tiene un **límite duro** de riesgo, no solo una preferencia γ. Las
+extensiones enriquecen el diseño reserva + spread, no lo reemplazan.
+
+</details>
+
+### A-S vs A-C: dos caras del mismo control óptimo  [C8 §4]
+Ambos son HJB sobre una posición bajo un browniano. **Almgren-Chriss**: deshacerse de una posición *conocida* en horizonte fijo, sin fills inciertos. **Avellaneda-Stoikov**: *ganar* el spread con fills inciertos (Poisson) que generan la posición. En ambos, alejarse del objetivo (posición o inventario cero) cuesta más cuanto más lejos: por eso los dos son el resorte.
+
+→ Almgren_Chriss · OU · los_dos_Avellaneda
+
+<details><summary>más</summary>
+
+"Los dos Avellaneda": Lee (C7, stat arb industrial) y Stoikov (C8, market making), mismo apellido
+y problemas opuestos.
+
+</details>
+
+## §5 HFT y los sistemas que lo ejecutan
+
+### La cadena de §5  [C8 §5]
+Física (latencia) → Economía (la opción gratis) → Señal (OFI) → Dinámica (Hawkes) → Sistemas (C++) → Patologías (Flash Crash, Knight). Cada eslabón depende del anterior: sin física no hay economía de la velocidad, sin economía no hay carrera, sin carrera no hace falta C++.
+
+→ latencia · OFI · Hawkes · Flash_Crash
+
+<details><summary>más</summary>
+
+Y cuando todo interactúa mal (Flash Crash) es porque **cada pieza local funcionó bien**.
+
+</details>
+
+### La física de la latencia  [C8 §5]
+Nace de dos hechos de §1 llevados al extremo: la **cola FIFO** (llegar antes = mejor posición) y la **fragmentación** (el precio cambia en un venue y hay una ventana de μs para operar el precio viejo en los demás). Escalones: colocation, kernel bypass, FPGA; cada uno es una industria.
+
+→ FIFO · NBBO · arbitraje_de_latencia
+
+<details><summary>más</summary>
+
+Spread Networks gastó USD 300M en fibra Chicago–NY para ahorrar 3 ms, y las microondas la
+superaron en dos años. Dentro del datacenter la carrera es en metros: el cross-connect se cobra por
+metro, y exchanges como NYSE exigen **cableado de igual largo** para todos (regulación resuelta con
+ingeniería).
+
+</details>
+
+### El arbitraje de latencia como opción gratis (Budish-Cramton-Shim 2015)  [C8 §5]
+Cotizar a precio fijo durante una ventana Δt es **emitir un straddle ATM**: el más rápido lo ejerce (te compra barato o te vende caro). Su valor: \(V(\Delta t)\approx S_0\sigma\sqrt{2\Delta t/\pi}\propto\sqrt{\Delta t}\). Duplicar la latencia multiplica el costo por √2, no por 2.
+
+→ straddle (C2) · Black_Scholes (C2) · selección_adversa ⚡
+
+<details><summary>más</summary>
+
+Es Black-Scholes de C2 en otro contexto: el straddle ATM con vencimiento corto coincide casi
+exactamente con la aproximación de Bachelier, y el ajuste log-log confirma la pendiente ≈0.5.
+Es la versión en microsegundos de la selección adversa de Glosten-Milgrom: el que te pega sabe
+(algo que pasó en otro venue).
+
+</details>
+
+### OFI vs OBI: el flujo le gana a la foto  [C8 §5]
+**OFI** (Cont-Kukanov-Stoikov): suma de eventos en la punta del libro (órdenes nuevas, cancelaciones, ejecuciones), \(\mathrm{OFI}_t=\sum_n e_n\), y \(\Delta P_t\approx\beta\,\mathrm{OFI}_t/AD_t\) (AD = profundidad). **OBI**: una foto, \((q^b-q^a)/(q^b+q^a)\in[-1,1]\). β cumple el rol del λ de Kyle, medido evento a evento.
+
+→ Kyle · Cartea_Jaimungal · Cont_Cucuringu_Zhang (tpfinal)
+
+<details><summary>más</summary>
+
+Ej. con datos reales (AAPL MBP-10, 2026-08-06, primeros 90 min, bloques de 30 s): OFI explica
+R²=0.54 del cambio de precio; OBI apenas R²=0.09. La foto sabe hacia dónde está inclinado el libro
+pero no cuánto se está moviendo; el flujo trae esa información.
+Cont, Cucuringu & Zhang (2023) llevan el OFI a 10 niveles y 7 tickers (está en la bibliografía del
+integrador).
+
+</details>
+
+### Procesos de Hawkes: el flujo llega en ráfagas  [C8 §5]
+Un Poisson asume eventos independientes; en un libro real un evento **causa** más eventos. Intensidad condicional: \(\lambda(t)=\mu+\sum_{t_i<t}\alpha e^{-\beta(t-t_i)}\): cada evento suma un salto α que decae con vida media \(\ln2/\beta\) (el resorte, otra vez). Branching ratio \(n=\alpha/\beta<1\) para que no explote.
+
+→ Poisson · A_S (fills) · OU · clustering_de_vol (C4)
+
+<details><summary>más</summary>
+
+Ej.: una ejecución grande dispara cancelaciones defensivas y reposicionamiento de otros MMs en
+milisegundos. Simulación (n=0.75) contra un Poisson de igual tasa media: el clustering se ve a
+simple vista. Aplica a eventos del libro y también a trades grandes reales.
+**Hawkes multivariado** (mención): una intensidad por tipo de evento (compras, ventas,
+cancelaciones o activos distintos) y una matriz \(\alpha_{kj}\), que es la red de quién dispara a quién.
+**Hawkes cuadrático** (Bouchaud-Maitrier, mención): la intensidad depende del *cuadrado* del
+desbalance de flujo pasado; hace falta para separar volatilidad de desbalance.
+
+</details>
+
+### Por qué C++ (research en Python, motor en C++)  [C8 §5]
+Todo §5 asumió cómputo instantáneo, y no lo es. Python es interpretado (paga un peaje por operación) y tiene el GIL; C++ compila y corre directo sobre el hardware (sumar 50M de cuadrados: ~47–67× más rápido con `-O2`). Arquitectura real: **research en Python arriba, motor en C++ abajo**.
+
+→ latencia · HFT
+
+<details><summary>más</summary>
+
+No contradice que el curso use Python: Python no compite en el *hot path* (la ejecución de una
+orden), compite en todo lo demás. En la clase fue una mención, sin desarrollo.
+
+</details>
+
+### El Flash Crash (6/5/2010)  [C8 §5]
+14:32: un fondo vende 75.000 E-minis con un **POV sin límite de precio**; el algo acelera porque el volumen sube, y el volumen sube porque él vende (feedback). 14:41: los MMs algorítmicos hacen lo que dice su modelo, **se retiran** (inventario explotado + σ disparada → quotes muy afuera); el libro queda vacío. 14:45: el CME pausa 5 s y alcanza. 15:08: todo recuperado.
+
+→ POV · Avellaneda_Stoikov · liquidez · crowding (C7) ⚡
+
+<details><summary>más</summary>
+
+La fragilidad fue **emergente**: nadie violó ninguna regla, cada algoritmo hizo lo correcto
+localmente. "La liquidez es un espejismo que se evapora cuando más se la necesita". Cierra el arco
+abierto en C1; 36 minutos que produjeron una década de regulación, y el informe SEC-CFTC inauguró el
+análisis forense con datos de LOB completos. Es el mismo patrón que agosto 2007 (C7): estrategias
+parecidas reaccionando igual al mismo tiempo.
+
+</details>
+
+### Knight Capital, spoofing y regulación  [C8 §5]
+**Knight Capital** (1/8/2012): USD 440M en 45 min; un deploy dejó código viejo en uno de ocho servidores y una flag reciclada lo despertó. En trading algorítmico **domina el riesgo operacional**, y desde entonces los kill switches son obligatorios. **Spoofing/layering**: órdenes grandes sin intención de ejecutar, para simular presión, que después se cancelan; ilegal (Dodd-Frank), y detectarlas es un problema de ML sobre el LOB.
+
+→ MiFID_II · ML (C6) · riesgo_operacional
+
+<details><summary>más</summary>
+
+**MiFID II** (Europa, 2018): timestamps sincronizados a 100 μs entre todos los participantes
+(reconstruir quién llegó primero), registro y testing obligatorio de cada algoritmo antes de
+producción, y ratios máximos orden/trade (penaliza al que cancela muchísimo más de lo que ejecuta).
+El principio: **no prohíbe la velocidad, exige trazabilidad** y responsabilidad cuando algo sale mal.
+
+</details>
+
+## §6 Cierre del curso y metodología: de la hipótesis al capital real
+
+### El arco completo: un lenguaje, escalas cada vez más chicas  [C8 §6]
+C1 el mapa (la foto macro) → C2 pricing sin modelo y BS → C3 el zoológico de vol, tasas y crédito → C4 estimar lo que el pricing asume → C5 de un activo a la cartera → C6 ML hecho bien → C7 stat arb (días–semanas) → C8 el libro hasta el μs. Mismo lenguaje (control estocástico, inferencia bayesiana, el resorte OU) en escalas cada vez más chicas.
+
+→ hilo_conductor · cuarto_hilo · trabajo_integrador
+
+<details><summary>más</summary>
+
+Decisiones de diseño del curso, a propósito: CAPM dos veces (C4 como regresión, C5 como
+equilibrio), los dos Avellaneda (Lee en C7, Stoikov en C8), y el checklist de C6 (multiple testing,
+look-ahead, costos) exigido otra vez en C7 y C8. Los hilos están resumidos en el **cuarto hilo**
+del índice.
+
+</details>
+
+### Pasos 1–2: mecanismo económico e hipótesis falseable  [C8 §6]
+**Paso 1**: una señal sin interpretación económica es un patrón, no una estrategia. Pregunta obligatoria: *¿quién está del otro lado y por qué acepta perder lo que yo gano?* Tres fuentes legítimas: **prima por riesgo** (CAPM, carry, iliquidez), **fricción estructural** (el otro opera por un motivo no económico; A-S explota esto), **ineficiencia de procesamiento** (Kyle; la más frágil y la que decae más rápido). **Paso 2**: la hipótesis tiene que poder morir, escribiendo el criterio de rechazo *antes* de mirar el resultado.
+
+→ VRP · adversario_adaptativo (C6) · trabajo_integrador
+
+<details><summary>más</summary>
+
+"Si no podés nombrar cuál de las tres es la tuya, todavía no tenés una estrategia, tenés una
+correlación." Falseable: "este par cointegra y revierte" (Engle-Granger con p>0.05 la mata). No
+falseable: "el mercado tiene ineficiencias que un modelo suficientemente flexible puede encontrar".
+Es el error que C6 diagnosticó: optimizar hasta encontrar *algo* sin haber arriesgado nada.
+
+</details>
+
+### Pasos 3–4: congelar reglas y meter fricciones  [C8 §6]
+**Paso 3, pre-registro**: antes del primer backtest se fija por escrito el universo (sin sesgo de supervivencia), la señal exacta (la fórmula, no "reversión a la media"), entrada/salida/stop, sizing, rebalanceo, benchmark y cuántos trades OOS hacen falta. **Paso 4**: cada fricción ignorada es un sesgo optimista, siempre para el mismo lado: bid-ask, slippage, comisiones, impacto, capacidad, costos de estar corto, latencia.
+
+→ Stoll · Almgren_Chriss · sqrt_law · capacidad (C7)
+
+<details><summary>más</summary>
+
+Detalles del Paso 4: operar al mid es ficción, hay que cruzar el spread en cada pata; nunca asumir
+fill en la misma barra que generó la señal (look-ahead encubierto); comisiones chicas por operación
+pero no acumuladas a alta frecuencia; capacidad: ¿la estrategia termina siendo el 20–30% del
+volumen?; corto: borrow fee, riesgo de recall en el peor momento, dividendos a pagar.
+Ej. de señal bien especificada: \(z=(p_t-\mu_{60d})/\sigma_{60d}\).
+
+</details>
+
+### Pasos 5–8: tratar de matarla y empezar despacio  [C8 §6]
+**Paso 5, atacar la propia estrategia**: walk-forward, bootstrap de trades, *shuffle* de la señal (si el Sharpe no cae a ≈0 hay una fuga), subperíodos/regímenes (2008, 2020, tasas que suben *y* que bajan), perturbar cada parámetro ±20%, **DSR > 0.95**, sacar los 2–3 trades extremos. **Pasos 6–8**: paper trading → capital mínimo → escalado condicionado al tracking error, con un **criterio de apagado escrito de antemano**.
+
+→ DSR_PBO (C6) · walk_forward (C5) · trabajo_integrador
+
+<details><summary>más</summary>
+
+Ocho pasos con dos circuitos de rechazo: la estrategia puede morir en el Paso 5 (no sobrevive al
+intento de refutarla) o en el Paso 7 (el live diverge del backtest). En ambos casos el rechazo es
+**el resultado correcto del protocolo**, no un fracaso. Monitorear el decaimiento de la señal: el
+mercado se adapta (adversario adaptativo, C6).
+Para el integrador: este protocolo es la rúbrica implícita. Pasos 1–5 aplican directo (mecanismo
+económico, hipótesis falseable, reglas congeladas, costos, auditoría).
+
+</details>
+
+## ❓ Dudas de C8
+
+*(Por completar después de repasar la clase.)*
+
+- ❓ DUDA: la slide 56 dice que OFI y Hawkes se desarrollaron "en serio" (verosimilitud, branching
+  ratio, red multivariada), pero en las slides solo están la intensidad y la mención del
+  multivariado. ¿Se vio el estimador por máxima verosimilitud en la práctica?
+- ❓ DUDA: el programa listaba protocolo FIX, C++ lock-free, volatilidad instantánea y detección de
+  spoofing con ML para la Unidad 3; en la clase quedaron como menciones o no aparecieron. ¿Entran
+  en el integrador o alcanza con lo visto?
+- ❓ DUDA: Kyle predice impacto lineal y la ley empírica es √Q. ¿Se mencionó qué modelo la
+  reproduce (Bouchaud, "libro latente")? Está en la bibliografía del integrador (Maitrier-Bouchaud
+  2025).
